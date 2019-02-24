@@ -256,39 +256,45 @@ public class CommandCraftCore extends JavaPlugin implements Listener {
 		map.put(EventPriority.HIGHEST, new LinkedList<>());
 		map.put(EventPriority.MONITOR, new LinkedList<>());
 
-		for (NewEvent e : eventManager.getEvent("OnDisableEvent").values()) {
-			map.get(e.getReader().getPriority()).add(e);
-		}
+		Map<File, NewEvent> ev = eventManager.getEvent("OnDisableEvent");
 
-		// reloadcount
-		int rc = (int) ReflectionUtil.getField(craftServer, "reloadCount");
+		if (ev != null) {
 
-		OnDisableEvent stopEvent = new OnDisableEvent(rc > reloadCount);
+			for (NewEvent e : ev.values()) {
+				map.get(e.getReader().getPriority()).add(e);
+			}
 
-		reloadCount = rc;
+			// reloadcount
+			int rc = (int) ReflectionUtil.getField(craftServer, "reloadCount");
 
-		try {
+			OnDisableEvent stopEvent = new OnDisableEvent(rc > reloadCount);
 
-			for (NewEvent e : map.get(EventPriority.LOWEST))
-				e.execute(e.getListener(), stopEvent);
+			reloadCount = rc;
 
-			for (NewEvent e : map.get(EventPriority.LOW))
-				e.execute(e.getListener(), stopEvent);
+			try {
 
-			for (NewEvent e : map.get(EventPriority.NORMAL))
-				e.execute(e.getListener(), stopEvent);
+				for (NewEvent e : map.get(EventPriority.LOWEST))
+					e.execute(e.getListener(), stopEvent);
 
-			for (NewEvent e : map.get(EventPriority.HIGH))
-				e.execute(e.getListener(), stopEvent);
+				for (NewEvent e : map.get(EventPriority.LOW))
+					e.execute(e.getListener(), stopEvent);
 
-			for (NewEvent e : map.get(EventPriority.HIGHEST))
-				e.execute(e.getListener(), stopEvent);
+				for (NewEvent e : map.get(EventPriority.NORMAL))
+					e.execute(e.getListener(), stopEvent);
 
-			for (NewEvent e : map.get(EventPriority.MONITOR))
-				e.execute(e.getListener(), stopEvent);
+				for (NewEvent e : map.get(EventPriority.HIGH))
+					e.execute(e.getListener(), stopEvent);
 
-		} catch (EventException e1) {
-			e1.printStackTrace();
+				for (NewEvent e : map.get(EventPriority.HIGHEST))
+					e.execute(e.getListener(), stopEvent);
+
+				for (NewEvent e : map.get(EventPriority.MONITOR))
+					e.execute(e.getListener(), stopEvent);
+
+			} catch (EventException e1) {
+				e1.printStackTrace();
+			}
+
 		}
 
 		for (NewCommand n : commandManager.getCommands().listValue1()) {
