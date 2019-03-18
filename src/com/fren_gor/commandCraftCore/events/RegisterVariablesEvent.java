@@ -152,7 +152,7 @@ public final class RegisterVariablesEvent extends Event {
 	 * Register a task to run after an {@link Event}
 	 * 
 	 * @param event
-	 *            The event to register
+	 *            The class of the event
 	 * @param description
 	 *            The description showed when users use /createscript command
 	 * @param task
@@ -161,6 +161,18 @@ public final class RegisterVariablesEvent extends Event {
 	public void registerEventTask(Class<? extends Event> event, TripleConsumer<Event, VariableManager, Boolean> task,
 			String... description) {
 		CommandCraftCore.getEventManager().registerEventTask(event, task, description);
+	}
+
+	/**
+	 * Register a description for an event
+	 * 
+	 * @param event
+	 *            The class of the event
+	 * @param description
+	 *            The description to add to the event
+	 */
+	public void registerEventDescription(Class<? extends Event> event, String... description) {
+		CommandCraftCore.getEventManager().registerEventDescription(event, description);
 	}
 
 }

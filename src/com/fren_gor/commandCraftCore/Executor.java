@@ -1120,7 +1120,7 @@ public class Executor {
 		return manager.applyVars(s);
 	}
 
-	private boolean invokeCommand(String cmd) {
+	public static boolean invokeCommand(String cmd) {
 
 		/*
 		 * for (Entry<String, Command> e :
@@ -1152,7 +1152,7 @@ public class Executor {
 
 	}
 
-	private boolean invokePlayerCommand(String cmd, Player p) {
+	public static boolean invokePlayerCommand(String cmd, Player p) {
 
 		String[] a = cmd.split(" ");
 

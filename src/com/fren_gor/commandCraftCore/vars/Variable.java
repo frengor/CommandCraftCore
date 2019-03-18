@@ -30,8 +30,11 @@ import lombok.Getter;
 
 public abstract class Variable implements Cloneable {
 
+	// Var cannot change at all
 	@Getter
 	private boolean Final = false;
+
+	// Var cannot change the value
 	@Getter
 	private boolean Const = false;
 
@@ -65,8 +68,6 @@ public abstract class Variable implements Cloneable {
 		m.vars.put(name, this);
 		this.name = name;
 		this.manager = m;
-		if (!name.startsWith("internal_"))
-			m.sort();
 	}
 
 	public void setFinal() {

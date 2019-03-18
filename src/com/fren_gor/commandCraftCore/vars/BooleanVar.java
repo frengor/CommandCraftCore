@@ -85,12 +85,13 @@ public class BooleanVar extends Variable {
 				if (isFinal()) {
 					throw new RuntimeException("Cannot modify a final variable");
 				}
-				if (isConst() && Type.NULL != parameter.getType())
+				if (isConst() && Type.BOOLEAN != parameter.getType())
 					throw new IllegalArgumentException("Cannot change " + name + "'s variable type");
 				if (parameter.getType() == Type.BOOLEAN) {
 					value = (boolean) parameter.get();
 					return this;
 				}
+
 				manager.vars.remove(getName());
 				return manager.craftVariable(name, parameter.get(), parameter.getType());
 			case "toString":

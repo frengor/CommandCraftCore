@@ -22,19 +22,20 @@
 
 package com.fren_gor.commandCraftCore.vars;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.StringJoiner;
 
 import org.apache.commons.lang.Validate;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
+import com.fren_gor.commandCraftCore.Executor;
+import com.fren_gor.commandCraftCore.LineType;
 import com.fren_gor.commandCraftCore.Reader;
+import com.fren_gor.commandCraftCore.utils.VariableMap;
+import com.fren_gor.commandCraftCore.utils.saveUtils.DoubleObject;
 
 import lombok.Getter;
 
@@ -49,17 +50,16 @@ public final class VariableManager implements Cloneable {
 	private int internalVars = 0;
 
 	@Getter
+	VariableMap vars = new VariableMap();
+
+	@Getter
 	public final StaticMethods staticVars;
 
-	public String generateInternalName() {
+	public final String generateInternalName() {
 		return "$internal_" + internalVars++;
 	}
 
-	private static String allowedChars = "abcdefghijklmnopqrstuvwxyzèòàùéçì";
-
-	static {
-		allowedChars = allowedChars + allowedChars.toUpperCase() + "0123456789_";
-	}
+	private static final String ALLOWED_CHARS = "abcdefghijklmnopqrstuvwxyzèòàùéçìABCDEFGHIJKLMNOPQRSTUVWXYZÈÒÀÙÉÇÌ0123456789_";
 
 	/**
 	 * It verifies if the name of the variable is correct
@@ -81,7 +81,7 @@ public final class VariableManager implements Cloneable {
 			throw new IllegalArgumentException("Variables must have only one '$' in front of the name");
 		}
 		for (char c : name.substring(1).toCharArray()) {
-			if (!allowedChars.contains(String.valueOf(c))) {
+			if (!ALLOWED_CHARS.contains(String.valueOf(c))) {
 				return false;
 			}
 		}
@@ -95,46 +95,16 @@ public final class VariableManager implements Cloneable {
 		staticVars = new StaticMethods(this);
 	}
 
-	@Getter
-	Map<String, Variable> vars = new LinkedHashMap<>();
-
-	public void sort() {
-
-		List<Entry<String, Variable>> entries = new ArrayList<>(vars.entrySet());
-		Collections.sort(entries, (s1, s2) -> {
-			if (s1.getKey().length() == s2.getKey().length())
-				return 0;
-			if (s1.getKey().length() > s2.getKey().length())
-				return -1;
-			return 1;
-		});
-
-		vars = new LinkedHashMap<>();
-		for (Map.Entry<String, Variable> entry : entries) {
-			vars.put(entry.getKey(), entry.getValue());
-		}
-
-	}
-
 	public void print() {
 
 		for (Entry<String, Variable> s : vars.entrySet()) {
-
 			System.out.println(s.getKey() + " -> " + s.getValue().toString());
 		}
 
-	}
-
-	public void clear() {
-		Iterator<Entry<String, Variable>> it = vars.entrySet().iterator();
-		while (it.hasNext()) {
-			Map.Entry<String, Variable> e = it.next();
-
-			if (!e.getValue().isFinal()) {
-				it.remove();
-			}
-
+		for (Entry<String, Variable> s : vars.internalsEntrySet()) {
+			System.out.println(s.getKey() + " -> " + s.getValue().toString());
 		}
+
 	}
 
 	/**
@@ -325,29 +295,10 @@ public final class VariableManager implements Cloneable {
 	}
 
 	/**
-	 * Replace the variables in {@link String} s with the variables values
-	 * 
-	 * @param s
-	 *            The {@link String} to translate
-	 * @return The {@link String} with the variables values
-	 */
-	// TODO to check
-	public String applyVars1(String s) {
-		for (Entry<String, Variable> e : vars.entrySet()) {
-			s = s.replace(e.getKey(),
-					/*
-					 * e.getValue().getType() == Type.STRING ? ((StringVar)
-					 * e.getValue()).toString1() :
-					 */ e.getValue().toString());
-		}
-		return s;
-	}
-
-	/**
 	 * Execute a statement
 	 * 
 	 * @param o
-	 *            The statement's {@link String}
+	 *            The {@link String} statement
 	 * @return The resulting variable
 	 */
 	public Variable execute(String o) {
@@ -364,10 +315,12 @@ public final class VariableManager implements Cloneable {
 
 	}
 
-	/*
-	 * private static String join(String[] s) { StringJoiner j = new
-	 * StringJoiner(" "); for (String ss : s) j.add(ss); return j.toString(); }
-	 */
+	private String join(String[] s) {
+		StringJoiner j = new StringJoiner(" ");
+		for (String ss : s)
+			j.add(applyVars(ss));
+		return j.toString();
+	}
 
 	private Variable subExecute(String o, String[] s) {
 		Validate.isTrue(s.length > 0, "Invalid line '" + o + "'");
@@ -420,10 +373,36 @@ public final class VariableManager implements Cloneable {
 					+ var.getType().toString().toLowerCase() + ")" + " doesn't have a method called '" + s[1] + "'");
 		} else {
 			if (s.length > 3) {
+
 				String[] s1 = new String[s.length - 2];
 				System.arraycopy(s, 2, s1, 0, s1.length);
-				return var.invoke(s[1], subExecute(o,
-						/* b.delete(0, s[0].length() + s[1].length() + 2), */ s1));
+
+				if (s[2].startsWith("/") || s[2].startsWith("\\")) {
+
+					return var.invoke(s[1], new BooleanVar(this, generateInternalName(),
+							Executor.invokeCommand(join(s1).substring(1))));
+
+				} else if (s[2].startsWith("(")) {
+
+					DoubleObject<LineType, String> d = Reader.getCommand(join(s1));
+
+					Player pl = Bukkit.getPlayer(d.getKey().getPlayerName());
+
+					if (pl == null)
+						throw new IllegalArgumentException(
+								"The player '" + d.getKey().getPlayerName() + "' is not online");
+
+					return var.invoke(s[1], new BooleanVar(this, generateInternalName(),
+							Executor.invokePlayerCommand(d.getValue(), pl)));
+
+				} else {
+
+					return var.invoke(s[1], subExecute(o,
+							/*
+							 * b.delete(0, s[0].length() + s[1].length() + 2),
+							 */ s1));
+				}
+
 			} else
 				// try {
 				return var.invoke(s[1], craftVar(generateInternalName(), s[2]));

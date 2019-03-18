@@ -187,7 +187,7 @@ public class DoubleVar extends Variable {
 				if (isFinal()) {
 					throw new RuntimeException("Cannot modify a final variable");
 				}
-				if (isConst() && Type.NULL != parameter.getType())
+				if (isConst() && Type.DOUBLE != parameter.getType())
 					throw new IllegalArgumentException("Cannot change " + name + "'s variable type");
 				if (parameter.getType() == Type.DOUBLE) {
 					value = d.getKey();
