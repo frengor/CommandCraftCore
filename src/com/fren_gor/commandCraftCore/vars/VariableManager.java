@@ -25,17 +25,12 @@ package com.fren_gor.commandCraftCore.vars;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.StringJoiner;
 
 import org.apache.commons.lang.Validate;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import com.fren_gor.commandCraftCore.Executor;
-import com.fren_gor.commandCraftCore.LineType;
-import com.fren_gor.commandCraftCore.Reader;
+import com.fren_gor.commandCraftCore.lines.conditions.CommandCondition;
 import com.fren_gor.commandCraftCore.utils.VariableMap;
-import com.fren_gor.commandCraftCore.utils.saveUtils.DoubleObject;
 
 import lombok.Getter;
 
@@ -53,7 +48,7 @@ public final class VariableManager implements Cloneable {
 	VariableMap vars = new VariableMap();
 
 	@Getter
-	public final StaticMethods staticVars;
+	public final StaticActions staticVars;
 
 	public final String generateInternalName() {
 		return "$internal_" + internalVars++;
@@ -92,16 +87,12 @@ public final class VariableManager implements Cloneable {
 	 * Just the constructor
 	 */
 	public VariableManager() {
-		staticVars = new StaticMethods(this);
+		staticVars = new StaticActions(this);
 	}
 
 	public void print() {
 
 		for (Entry<String, Variable> s : vars.entrySet()) {
-			System.out.println(s.getKey() + " -> " + s.getValue().toString());
-		}
-
-		for (Entry<String, Variable> s : vars.internalsEntrySet()) {
 			System.out.println(s.getKey() + " -> " + s.getValue().toString());
 		}
 
@@ -116,7 +107,7 @@ public final class VariableManager implements Cloneable {
 	 */
 	public Variable getVar(String name) {
 
-		name = name.startsWith("$") ? Reader.trim(name) : "$" + Reader.trim(name);
+		name = name.startsWith("$") ? name.trim() : "$" + name.trim();
 
 		Validate.isTrue(verifyName(name), "Illegal Name " + name);
 
@@ -140,14 +131,18 @@ public final class VariableManager implements Cloneable {
 	 */
 	public Variable craftVar(String name, String value) {
 
-		name = name.startsWith("$") ? Reader.trim(name) : "$" + Reader.trim(name);
+		name = name.startsWith("$") ? name.trim() : "$" + name.trim();
 
 		// Validate.isTrue(verifyName(name), "Illegal Name " + name);
 
 		if (vars.containsKey(name))
 			return vars.get(name);
 
-		value = Reader.trim(value);
+		value = value.trim();
+
+		if (value.isEmpty()) {
+			return new NullVar(this, name);
+		}
 
 		if (value.startsWith("@")) {
 			return staticVars.getVariable(split(value));
@@ -161,8 +156,10 @@ public final class VariableManager implements Cloneable {
 			return new NullVar(this, name);
 		}
 
-		if (value.isEmpty()) {
-			return new NullVar(this, name);
+		if (value.startsWith("/") || value.startsWith("\\") || value.startsWith("(")) {
+
+			return new BooleanVar(this, generateInternalName(), new CommandCondition(value).execute(this));
+
 		}
 
 		if (value.equalsIgnoreCase("true")) {
@@ -177,6 +174,13 @@ public final class VariableManager implements Cloneable {
 		if (value.startsWith("\"") && value.endsWith("\"")) {
 			return new StringVar(this, name, value.substring(1, value.length() - 1));
 		}
+		if (value.startsWith("{") && value.endsWith("}")) {
+			/*
+			 * if (containsOnly(value.substring(1, value.length() - 1), ' ')) {
+			 * return new ListVar(this, name, new LinkedList<>()); }
+			 */
+			return new StructVar(this, name, splitStruct(value.substring(1, value.length() - 1)));
+		}
 		if (value.startsWith("[") && value.endsWith("]")) {
 			/*
 			 * if (containsOnly(value.substring(1, value.length() - 1), ' ')) {
@@ -185,7 +189,7 @@ public final class VariableManager implements Cloneable {
 			return new ListVar(this, name, splitList(value.substring(1, value.length() - 1)));
 		}
 
-		Type t = Type.INT;
+		VarType t = VarType.INT;
 
 		boolean min = false;
 		if (value.startsWith("-")) {
@@ -196,7 +200,7 @@ public final class VariableManager implements Cloneable {
 		for (char c : value.toCharArray()) {
 
 			if (c == '.') {
-				t = Type.DOUBLE;
+				t = VarType.DOUBLE;
 				continue;
 			}
 
@@ -209,37 +213,38 @@ public final class VariableManager implements Cloneable {
 
 		}
 
-		if (t == Type.INT) {
+		if (t == VarType.INT) {
 			return new IntVar(this, name, (min ? -1 : 1) * Integer.parseInt(value));
 		}
 
-		if (t == Type.DOUBLE) {
+		if (t == VarType.DOUBLE) {
 			return new DoubleVar(this, name, (min ? -1 : 1) * Double.parseDouble(value));
 		}
 		return new NullVar(this, name);
 	}
 
-	private List<Variable> splitList(String o) {
+	private List<Variable> splitStruct(String o) {
 
-		if (o.trim().isEmpty()) {
+		if (o.replace(" ", "").replace("\t", "").isEmpty()) {
 			return new LinkedList<>();
 		}
 
 		boolean inString = false;
 		boolean next = false;
 
-		List<String> split = new LinkedList<>();
+		List<Variable> split = new LinkedList<>();
 
 		StringBuilder a = new StringBuilder();
 
-		for (char c : o.toCharArray()) {
-
+		for (int i = 0; i < o.length(); i++) {
+			char c = o.charAt(i);
 			if (next) {
 				a.append(c);
 				next = false;
 				continue;
 			}
-			if (c == '\\') {
+
+			if (c == '\\' && inString) {
 				next = true;
 				continue;
 			}
@@ -254,9 +259,71 @@ public final class VariableManager implements Cloneable {
 				continue;
 			}
 
-			if (c == ',') {
+			if (c == '{') {
+				a = new StringBuilder();
+				int opens = 1;
 
-				split.add(a.toString());
+				StringBuilder b = new StringBuilder("{");
+				i++;
+				for (; i < o.length(); i++) {
+					char cc = o.charAt(i);
+					if (cc == '{') {
+						opens++;
+					} else if (cc == '}') {
+						opens--;
+					}
+					b.append(cc);
+					if (opens == 0)
+						break;
+				}
+
+				if (opens > 0) {
+					throw new IllegalArgumentException("Unbalanced { }");
+				}
+
+				// if (b.toString().trim().length() != 0){System.out.println("1
+				// true: " + b.toString());
+				split.add(craftVar(generateInternalName(), b.toString()));// }else{System.out.println("1
+																			// false");}
+				continue;
+			}
+
+			if (c == '[') {
+				a = new StringBuilder();
+				int opens = 1;
+
+				StringBuilder b = new StringBuilder("[");
+				i++;
+				for (; i < o.length(); i++) {
+					char cc = o.charAt(i);
+					if (cc == '[') {
+						opens++;
+					} else if (cc == ']') {
+						opens--;
+					}
+					b.append(cc);
+					if (opens == 0)
+						break;
+				}
+
+				if (opens > 0) {
+					throw new IllegalArgumentException("Unbalanced [ ]");
+				}
+
+				// if (b.toString().trim().length() != 0){System.out.println("2
+				// true: " + b.toString());
+				split.add(craftVar(generateInternalName(), b.toString()));// }else{System.out.println("2
+																			// false");}
+				continue;
+
+			}
+
+			if (c == ',') {
+				if (a.toString().trim().length() != 0)// {System.out.println("3
+														// true: " +
+														// a.toString());
+					split.add(craftVar(generateInternalName(), a.toString()));// }else{System.out.println("3
+																				// false");}
 				a = new StringBuilder();
 				continue;
 
@@ -266,31 +333,121 @@ public final class VariableManager implements Cloneable {
 
 		}
 
-		split.add(a.toString());
+		if (inString)
+			throw new IllegalArgumentException(
+					"Illegal var value '" + split.get(split.size() - 1) + "': unbalanced \" \"");
+
+		if (a.toString().trim().length() != 0)// {System.out.println("4 true: "
+												// + a.toString());
+			split.add(craftVar(generateInternalName(), a.toString()));// }else{System.out.println("4
+																		// false");}
+
+		return split;
+
+	}
+
+	private List<Variable> splitList(String o) {
+
+		if (o.replace(" ", "").replace("\t", "").isEmpty()) {
+			return new LinkedList<>();
+		}
+
+		boolean inString = false;
+		boolean next = false;
+
+		List<Variable> split = new LinkedList<>();
+
+		StringBuilder a = new StringBuilder();
+
+		for (int i = 0; i < o.length(); i++) {
+
+			char c = o.charAt(i);
+
+			if (next) {
+				a.append(c);
+				next = false;
+				continue;
+			}
+			if (c == '\\' && inString) {
+				next = true;
+				continue;
+			}
+			if (c == '"') {
+				a.append("\"");
+				inString = !inString;
+				continue;
+			}
+
+			if (inString) {
+				a.append(c);
+				continue;
+			}
+
+			if (c == '{') {
+				a = new StringBuilder();
+				int opens = 1;
+
+				StringBuilder b = new StringBuilder("{");
+				i++;
+				for (; i < o.length(); i++) {
+					char cc = o.charAt(i);
+					if (cc == '{') {
+						opens++;
+					} else if (cc == '}') {
+						opens--;
+					}
+					b.append(cc);
+					if (opens == 0)
+						break;
+				}
+
+				if (opens > 0) {
+					throw new IllegalArgumentException("Unbalanced { }");
+				}
+
+				// if (b.toString().trim().length() != 0){System.out.println("5
+				// true: " + b.toString());
+				split.add(craftVar(generateInternalName(), b.toString()));// }else{System.out.println("5
+																			// false");}
+				continue;
+			}
+
+			if (c == ',') {
+				if (a.toString().trim().length() != 0)// {System.out.println("6
+														// true: " +
+														// a.toString());
+					split.add(craftVar(generateInternalName(), a.toString()));// }else{System.out.println("6
+																				// false");}
+				a = new StringBuilder();
+				continue;
+
+			}
+
+			a.append(c);
+
+		}
 
 		if (inString)
 			throw new IllegalArgumentException(
 					"Illegal var value '" + split.get(split.size() - 1) + "': unbalanced \" \"");
 
-		Type t = null;
+		if (a.toString().trim().length() != 0)// {System.out.println("7 true: "
+												// + a.toString());
+			split.add(craftVar(generateInternalName(), a.toString()));// }else{System.out.println("7
+																		// false");}
 
-		List<Variable> l = new LinkedList<>();
+		VarType t = null;
 
-		for (String s : split) {
-			Variable v = craftVar(generateInternalName(), s);
-			l.add(v);
-
+		for (Variable s : split) {
 			if (t == null) {
-
-				t = v.getType();
-
-			} else if (v.getType() != t) {
-				throw new IllegalArgumentException("Illegal list type '" + v.getType() + "'! It should be '" + t + "'");
+				t = s.getType();
+			} else if (s.getType() != t) {
+				throw new IllegalArgumentException("Illegal list type '" + s.getType() + "'! It should be '" + t + "'");
 			}
 
 		}
 
-		return l;
+		return split;
 
 	}
 
@@ -309,17 +466,10 @@ public final class VariableManager implements Cloneable {
 			b.delete(0, 5);
 		}
 
-		String[] s = split(Reader.trim(b));
+		String[] s = split(b.toString().trim());
 
 		return subExecute(o, s);
 
-	}
-
-	private String join(String[] s) {
-		StringJoiner j = new StringJoiner(" ");
-		for (String ss : s)
-			j.add(applyVars(ss));
-		return j.toString();
 	}
 
 	private Variable subExecute(String o, String[] s) {
@@ -350,15 +500,8 @@ public final class VariableManager implements Cloneable {
 		if (s.length == 1) {
 			return var;
 		} else if (s.length == 2) {
-			// try {
 			return var.invoke(s[1], null);
-			// } catch (java.lang.NullPointerException e) {
-			// throw new NullPointerException("Method ' " + s[1] + " ' require
-			// an argument", e);
-			// }
 		}
-
-		// Validate.isTrue((s.length - 1) % 2 == 0, "Invalid line '" + o + "'");
 
 		if (s[1].equals("instanceOf")) {
 
@@ -377,92 +520,12 @@ public final class VariableManager implements Cloneable {
 				String[] s1 = new String[s.length - 2];
 				System.arraycopy(s, 2, s1, 0, s1.length);
 
-				if (s[2].startsWith("/") || s[2].startsWith("\\")) {
-
-					return var.invoke(s[1], new BooleanVar(this, generateInternalName(),
-							Executor.invokeCommand(join(s1).substring(1))));
-
-				} else if (s[2].startsWith("(")) {
-
-					DoubleObject<LineType, String> d = Reader.getCommand(join(s1));
-
-					Player pl = Bukkit.getPlayer(d.getKey().getPlayerName());
-
-					if (pl == null)
-						throw new IllegalArgumentException(
-								"The player '" + d.getKey().getPlayerName() + "' is not online");
-
-					return var.invoke(s[1], new BooleanVar(this, generateInternalName(),
-							Executor.invokePlayerCommand(d.getValue(), pl)));
-
-				} else {
-
-					return var.invoke(s[1], subExecute(o,
-							/*
-							 * b.delete(0, s[0].length() + s[1].length() + 2),
-							 */ s1));
-				}
+				return var.invoke(s[1], subExecute(o, s1));
 
 			} else
-				// try {
 				return var.invoke(s[1], craftVar(generateInternalName(), s[2]));
-			// } catch (java.lang.NullPointerException e) {
-			// throw new NullPointerException("Method ' " + s[1] + " ' require
-			// an argument", e);
-			// }
 		}
 	}
-
-	/*
-	 * private Variable getVar(char[] a, int i, boolean allowMethods) {
-	 * 
-	 * StringBuilder b = new StringBuilder();
-	 * 
-	 * do { i++; if (i == a.length) return Variable.getVar(b.toString());
-	 * b.append(a[i]); } while (a[i] != ' ' && a[i] != '#');
-	 * 
-	 * Variable v = Variable.getVar(b.toString());
-	 * 
-	 * if (a[i + 1] != '#') { return v; }
-	 * 
-	 * if (!allowMethods) throw new
-	 * IllegalArgumentException("Could not invoke methods on variable " +
-	 * b.toString());
-	 * 
-	 * StringBuilder method = new StringBuilder(); StringBuilder par = new
-	 * StringBuilder(); List<String> pars = new LinkedList<>();
-	 * 
-	 * do { i++; if (i == a.length) throw new
-	 * IllegalArgumentException("Unbalanced round brackets");
-	 * 
-	 * method.append(a[i]);
-	 * 
-	 * } while (a[i] != '(');
-	 * 
-	 * do {
-	 * 
-	 * i++; if (a[i] == ' ') continue; if (i == a.length) throw new
-	 * IllegalArgumentException("Unbalanced round brackets"); if (a[i] == ',') {
-	 * pars.add(par.toString()); par = new StringBuilder(); } else
-	 * par.append(a[i]);
-	 * 
-	 * } while (a[i] != ')');
-	 * 
-	 * pars.add(par.toString());
-	 * 
-	 * Variable[] vars = new Variable[pars.size()];
-	 * 
-	 * for (int ii = 0; ii < pars.size(); ii++) { vars[ii] =
-	 * Variable.getVar(pars.get(ii)); if (vars[ii].getType() == Type.NULL) {
-	 * vars[ii] = Variable.deserializeVar(Variable.generateInternalName(),
-	 * pars.get(ii)); } }
-	 * 
-	 * v.invoke(method.toString(), vars);
-	 * 
-	 * return v;
-	 * 
-	 * }
-	 */
 
 	private String[] split(String s) {
 
@@ -470,12 +533,18 @@ public final class VariableManager implements Cloneable {
 		boolean next = false;
 		boolean inSquare = false;
 		boolean inStatic = false;
+		boolean addAll = false;
 
 		List<String> split = new LinkedList<>();
 
 		StringBuilder a = new StringBuilder();
 
-		for (char c : s.toCharArray()) {
+		for (int i = 0; i < s.length(); i++) {
+			char c = s.charAt(i);
+			if (addAll) {
+				a.append(c);
+				continue;
+			}
 
 			if (inStatic) {
 				if (c == ' ') {
@@ -493,10 +562,19 @@ public final class VariableManager implements Cloneable {
 				next = false;
 				continue;
 			}
+
 			if (c == '\\') {
-				next = true;
-				continue;
+				if (inString) {
+					next = true;
+					continue;
+				}
+				if (a.length() == 0) {
+					addAll = true;
+					a.append(c);
+					continue;
+				}
 			}
+
 			if (c == '"') {
 				a.append("\"");
 				inString = !inString;
@@ -504,6 +582,12 @@ public final class VariableManager implements Cloneable {
 			}
 
 			if (inString) {
+				a.append(c);
+				continue;
+			}
+
+			if ((c == '(' || c == '/') && a.length() == 0) {
+				addAll = true;
 				a.append(c);
 				continue;
 			}
@@ -539,8 +623,32 @@ public final class VariableManager implements Cloneable {
 				continue;
 			}
 			if (c == ']') {
-
 				throw new IllegalArgumentException("Invalid char ']', there isn't a '['");
+			}
+
+			if (c == '{') {
+				int opens = 0;
+
+				StringBuilder b = new StringBuilder();
+
+				for (; i < s.length(); i++) {
+					char cc = s.charAt(i);
+					if (cc == '{') {
+						opens++;
+					} else if (cc == '}') {
+						opens--;
+					}
+					b.append(cc);
+					if (opens == 0)
+						break;
+				}
+
+				if (opens > 0) {
+					throw new IllegalArgumentException("Missing one or more '}'");
+				}
+
+				split.add(b.toString());
+				continue;
 			}
 
 			if (c == ' ') {
@@ -570,21 +678,27 @@ public final class VariableManager implements Cloneable {
 	}
 
 	@SuppressWarnings("unchecked")
-	Variable craftVariable(String name, Object value, Type type) {
-		switch (type) {
-			case BOOLEAN:
+	Variable craftVariable(String name, Object value, VarType type) {
+		if (value instanceof Variable) {
+			value = ((Variable) value).get();
+		}
+		switch (type.toString()) {
+			case "BOOLEAN":
 				return new BooleanVar(this, name, (boolean) value);
-			case INT:
+			case "INT":
 				return new IntVar(this, name, (int) value);
-			case LIST:
+			case "LIST":
 				return new ListVar(this, name, (LinkedList<Variable>) value);
-			case DOUBLE:
+			case "DOUBLE":
 				return new DoubleVar(this, name, (double) value);
-			case STRING:
+			case "STRING":
 				return new StringVar(this, name, (String) value);
-			case PLAYER:
+			case "PLAYER":
 				return new PlayerVar(this, name, (Player) value);
+			case "STRUCT":
+				return new StructVar(this, name, (List<Variable>) value);
 			default:
+				// TODO add constructors for new variable types
 				return new NullVar(this, name);
 		}
 
@@ -592,10 +706,45 @@ public final class VariableManager implements Cloneable {
 
 	public String applyVars(String s) {
 		for (Entry<String, Variable> e : vars.entrySet()) {
-			s = s.replace(e.getKey(), e.getValue().getType() == Type.STRING ? ((StringVar) e.getValue()).toString1()
-					: e.getValue().toString());
+			s = s.replace(e.getKey(),
+					e.getValue().getType() == VarType.STRING ? ((StringVar) e.getValue()).rawToString()
+							: e.getValue().toString());
 		}
 		return s;
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + internalVars;
+		result = prime * result + ((staticVars == null) ? 0 : staticVars.hashCode());
+		result = prime * result + ((vars == null) ? 0 : vars.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (!(obj instanceof VariableManager))
+			return false;
+		VariableManager other = (VariableManager) obj;
+		if (internalVars != other.internalVars)
+			return false;
+		if (staticVars == null) {
+			if (other.staticVars != null)
+				return false;
+		} else if (!staticVars.equals(other.staticVars))
+			return false;
+		if (vars == null) {
+			if (other.vars != null)
+				return false;
+		} else if (!vars.equals(other.vars))
+			return false;
+		return true;
 	}
 
 }

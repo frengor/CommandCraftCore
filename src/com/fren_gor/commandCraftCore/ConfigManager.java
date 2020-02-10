@@ -22,25 +22,45 @@
 
 package com.fren_gor.commandCraftCore;
 
+import java.util.LinkedList;
+import java.util.List;
+
+import lombok.Getter;
+
 public class ConfigManager {
 
-	private static boolean debugMode = false;
-	private static boolean viewExecuteTime = false;
+	static boolean debugMode = false;
+	static boolean viewExecutingTime = false;
+	static boolean viewReadingTime = false;
+	static boolean ignoreLops = true;
+	static boolean createFolders = false;
+	@Getter
+	static List<String> disabledScripts = new LinkedList<>();
 
-	public static boolean isActiveViewExecuteTime() {
-		return viewExecuteTime;
+	public static boolean isActiveViewReadingTime() {
+		return viewReadingTime;
 	}
 
-	static void setViewExecuteTime(boolean viewExecuteTime) {
-		ConfigManager.viewExecuteTime = viewExecuteTime;
+	public static boolean isActiveViewExecutingTime() {
+		return viewExecutingTime;
 	}
 
 	public static boolean isActiveDebugMode() {
 		return debugMode;
 	}
 
-	static void setDebugMode(boolean debugMode) {
-		ConfigManager.debugMode = debugMode;
+	public static boolean ignoreLoop() {
+		return ignoreLops;
+	}
+
+	public static boolean createFolders() {
+		return createFolders;
+	}
+
+	static void setDisabledScripts(List<String> l) {
+		for (String s : l) {
+			disabledScripts.add(s.endsWith(".cmc") ? s : s + ".cmc");
+		}
 	}
 
 }

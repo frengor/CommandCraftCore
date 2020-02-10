@@ -22,18 +22,18 @@
 
 package com.fren_gor.commandCraftCore.vars;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
+import java.util.Set;
 
 import com.fren_gor.commandCraftCore.utils.saveUtils.TripleObject;
+import com.google.common.collect.Sets;
 
 import lombok.Getter;
 
 public class IntVar extends Variable {
 
 	@Getter
-	private static List<String> list = Collections.unmodifiableList(Arrays.asList("=", "+", "-", "*", "/", "\\/¯", "%",
+	private static Set<String> list = Collections.unmodifiableSet(Sets.newHashSet("=", "+", "-", "*", "/", "âˆš", "%",
 			"!=", "^", "toString", "clone", "==", "equals", ">", "v", "<", ">=", "<=", "toDouble", "type"));
 
 	@Getter
@@ -50,7 +50,7 @@ public class IntVar extends Variable {
 	}
 
 	@Override
-	public List<String> getMethods() {
+	public Set<String> getMethods() {
 		return list;
 	}
 
@@ -60,8 +60,8 @@ public class IntVar extends Variable {
 	}
 
 	@Override
-	public Type getType() {
-		return Type.INT;
+	public VarType getType() {
+		return VarType.INT;
 	}
 
 	@Override
@@ -141,9 +141,9 @@ public class IntVar extends Variable {
 				if (isFinal()) {
 					throw new RuntimeException("Cannot modify a final variable");
 				}
-				if (isConst() && Type.INT != parameter.getType())
+				if (isConst() && VarType.INT != parameter.getType())
 					throw new IllegalArgumentException("Cannot change " + name + "'s variable type");
-				if (parameter.getType() == Type.INT) {
+				if (parameter.getType() == VarType.INT) {
 					value = d.getKey();
 					return this;
 				}
@@ -154,7 +154,7 @@ public class IntVar extends Variable {
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
 				if (d.getValue2()) {
 
-					if (parameter.getType() == Type.DOUBLE)
+					if (parameter.getType() == VarType.DOUBLE)
 						return new DoubleVar(manager, manager.generateInternalName(), d.getValue1() + value);
 					return new IntVar(manager, manager.generateInternalName(), d.getKey() + value);
 
@@ -167,7 +167,7 @@ public class IntVar extends Variable {
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
 				if (d.getValue2()) {
 
-					if (parameter.getType() == Type.DOUBLE)
+					if (parameter.getType() == VarType.DOUBLE)
 						return new DoubleVar(manager, manager.generateInternalName(), value - d.getValue1());
 					return new IntVar(manager, manager.generateInternalName(), value - d.getKey());
 
@@ -180,7 +180,7 @@ public class IntVar extends Variable {
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
 				if (d.getValue2()) {
 
-					if (parameter.getType() == Type.DOUBLE)
+					if (parameter.getType() == VarType.DOUBLE)
 						return new DoubleVar(manager, manager.generateInternalName(), value * d.getValue1());
 					return new IntVar(manager, manager.generateInternalName(), value * d.getKey());
 
@@ -193,7 +193,7 @@ public class IntVar extends Variable {
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
 				if (d.getValue2()) {
 
-					if (parameter.getType() == Type.DOUBLE)
+					if (parameter.getType() == VarType.DOUBLE)
 						return new DoubleVar(manager, manager.generateInternalName(), value / d.getValue1());
 					return new IntVar(manager, manager.generateInternalName(), value / d.getKey());
 
@@ -203,13 +203,12 @@ public class IntVar extends Variable {
 				}
 				// root
 			case "v":
-				// Alt + 0175
-			case "\\/¯":
+				// \u221A
+			case "âˆš":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				if (parameter.getType() != Type.INT) {
-					throw new IllegalArgumentException(
-							parameter.getType().toString().toLowerCase() + " is not an integer variable");
+				if (parameter.getType() != VarType.INT) {
+					throw new IllegalArgumentException(parameter.getName() + " is not an integer variable");
 				}
 
 				int v = (int) Math.pow(Math.E, Math.log(value) / d.getValue1());
@@ -219,7 +218,7 @@ public class IntVar extends Variable {
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
 				if (d.getValue2()) {
 
-					if (parameter.getType() == Type.DOUBLE)
+					if (parameter.getType() == VarType.DOUBLE)
 						return new DoubleVar(manager, manager.generateInternalName(), value % d.getValue1());
 					return new IntVar(manager, manager.generateInternalName(), value % d.getKey());
 
@@ -231,7 +230,7 @@ public class IntVar extends Variable {
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
 				if (d.getValue2()) {
-					if (parameter.getType() == Type.DOUBLE)
+					if (parameter.getType() == VarType.DOUBLE)
 						return new DoubleVar(manager, manager.generateInternalName(), Math.pow(value, d.getValue1()));
 					return new IntVar(manager, manager.generateInternalName(), (int) Math.pow(value, d.getKey()));
 
@@ -244,17 +243,17 @@ public class IntVar extends Variable {
 					throw new IllegalArgumentException("The method ' " + method + " ' cannot have any parameters");
 				return new StringVar(manager, manager.generateInternalName(), toString());
 			default:
-				throw new IllegalArgumentException("Method '" + method + "' is not implemented");
+				throw new IllegalArgumentException("Method '" + method + "' not exists");
 		}
 
 	}
 
 	private static TripleObject<Integer, Double, Boolean> transorm(Variable v) {
 
-		switch (v.getType()) {
-			case INT:
+		switch (v.getType().toString()) {
+			case "INT":
 				return new TripleObject<>((int) v.get(), (double) (int) v.get(), true);
-			case DOUBLE:
+			case "DOUBLE":
 				return new TripleObject<>((int) (double) v.get(), (double) v.get(), true);
 			default:
 				return new TripleObject<>(null, null, false);

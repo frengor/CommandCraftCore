@@ -22,27 +22,59 @@
 
 package com.fren_gor.commandCraftCore.vars;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.StringJoiner;
 
 import org.apache.commons.lang.Validate;
+
+import com.google.common.collect.Sets;
 
 import lombok.Getter;
 
 public class ListVar extends Variable {
 
 	@Getter
-	private static List<String> list = Collections.unmodifiableList(Arrays.asList("=", "==", "equals", "add", "remove",
-			"get", "size", "clone", "indexOf", "contains", "toString", "!=", "sort", "invert", "type", "listType"));
+	private static Set<String> list = Collections
+			.unmodifiableSet(Sets.newHashSet("=", "==", "equals", "add", "remove", "removeExact", "get", "size",
+					"clone", "indexOf", "contains", "toString", "!=", "sort", "invert", "type", "listType"));
 
 	@Getter
 	private List<Variable> value;
 
+	public void add(Variable parameter) {
+		Validate.notNull(parameter);
+		if (isFinal()) {
+			throw new RuntimeException("Cannot modify a final variable");
+		}
+		if (parameter.getType() == VarType.LIST) {
+			ListVar p = (ListVar) parameter;
+			if (p.listType == null)
+				return;
+			if (listType == null) {
+				value = new LinkedList<>(p.value);
+				listType = ((ListVar) parameter).getListType();
+				return;
+			}
+			if (listType != p.listType)
+				throw new IllegalArgumentException("Illegal list type " + p.listType.toString().toLowerCase()
+						+ "! It should be " + listType.toString().toLowerCase());
+			value.addAll(p.value);
+			return;
+		}
+		if (listType == null)
+			listType = parameter.getType();
+		else
+			Validate.isTrue(parameter.getType() == listType,
+					"Illegal list type " + parameter.getType().toString().toLowerCase() + "! It should be "
+							+ listType.toString().toLowerCase());
+		value.add(parameter);
+	}
+
 	@Getter
-	private Type listType;
+	private VarType listType;
 
 	// ConstructorUse
 	private String illegal;
@@ -62,7 +94,7 @@ public class ListVar extends Variable {
 					listType = v.getType();
 					return false;
 				}
-				if (v.getType() == Type.LIST || v.getType() != listType) {
+				if (v.getType() == VarType.LIST || v.getType() != listType) {
 					illegal = v.getType().toString().toLowerCase();
 					return true;
 				}
@@ -78,7 +110,7 @@ public class ListVar extends Variable {
 
 		super(m, name);
 
-		listType = Type.STRING;
+		listType = VarType.STRING;
 
 		value = new LinkedList<>();
 
@@ -91,7 +123,7 @@ public class ListVar extends Variable {
 
 		super(m, name);
 
-		listType = Type.STRING;
+		listType = VarType.STRING;
 
 		value = new LinkedList<>();
 
@@ -101,7 +133,7 @@ public class ListVar extends Variable {
 	}
 
 	@Override
-	public List<String> getMethods() {
+	public Set<String> getMethods() {
 		return list;
 	}
 
@@ -111,8 +143,8 @@ public class ListVar extends Variable {
 	}
 
 	@Override
-	public Type getType() {
-		return Type.LIST;
+	public VarType getType() {
+		return VarType.LIST;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -151,14 +183,14 @@ public class ListVar extends Variable {
 			case "equals":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				if (parameter.getType() == Type.LIST && ((ListVar) parameter).getListType() == listType) {
+				if (parameter.getType() == VarType.LIST && ((ListVar) parameter).getListType() == listType) {
 					return new BooleanVar(manager, manager.generateInternalName(), value.equals(parameter.get()));
 				}
 				return new BooleanVar(manager, manager.generateInternalName(), false);
 			case "!=":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				if (parameter.getType() == Type.LIST && ((ListVar) parameter).getListType() == listType) {
+				if (parameter.getType() == VarType.LIST && ((ListVar) parameter).getListType() == listType) {
 					return new BooleanVar(manager, manager.generateInternalName(), !value.equals(parameter.get()));
 				}
 				return new BooleanVar(manager, manager.generateInternalName(), true);
@@ -169,12 +201,12 @@ public class ListVar extends Variable {
 					throw new RuntimeException("Cannot modify a final variable");
 				}
 				if (isConst())
-					if (Type.LIST != parameter.getType())
+					if (VarType.LIST != parameter.getType())
 						throw new IllegalArgumentException("Cannot change " + name + "'s variable type");
 					else if (listType != ((ListVar) parameter).getListType())
 						throw new IllegalArgumentException("Cannot change " + name + "'s list variable type");
-				if (parameter.getType() == Type.LIST) {
-					value = new LinkedList<>((List<Variable>) parameter.get());
+				if (parameter.getType() == VarType.LIST) {
+					value = (List<Variable>) parameter.get();
 					listType = ((ListVar) parameter).getListType();
 					return this;
 				}
@@ -188,7 +220,7 @@ public class ListVar extends Variable {
 				if (isFinal()) {
 					throw new RuntimeException("Cannot modify a final variable");
 				}
-				if (parameter.getType() == Type.LIST) {
+				if (parameter.getType() == VarType.LIST) {
 					ListVar p = (ListVar) parameter;
 					if (p.listType == null)
 						return this;
@@ -218,18 +250,22 @@ public class ListVar extends Variable {
 				if (isFinal()) {
 					throw new RuntimeException("Cannot modify a final variable");
 				}
-				if (parameter.getType() != Type.INT) {
-					throw new IllegalArgumentException("Parameter of method 'get' must be an integer");
-				}
 				return new BooleanVar(manager, manager.generateInternalName(), value.remove(parameter.get()));
+			case "removeExact":
+				if (parameter == null)
+					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
+				if (isFinal()) {
+					throw new RuntimeException("Cannot modify a final variable");
+				}
+				return value.remove((int) parameter.get());
 			case "get":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				if (parameter.getType() != Type.INT) {
-					throw new IllegalArgumentException("Parameter of method 'get' must be an integer");
+				if (parameter.getType() != VarType.INT) {
+					throw new IllegalArgumentException("The parameter of the method 'get' must be an integer");
 				}
-				return manager.craftVariable(manager.generateInternalName(), value.get((int) parameter.get()),
-						listType);
+				return manager.craftVariable(manager.generateInternalName(),
+						value.get((int) parameter.get()).toString(), listType);
 			case "clone":
 				if (parameter != null)
 					throw new IllegalArgumentException("The method ' " + method + " ' cannot have any parameters");
@@ -253,7 +289,7 @@ public class ListVar extends Variable {
 				return new StringVar(manager, manager.generateInternalName(), toString());
 
 			default:
-				throw new IllegalArgumentException("Method '" + method + "' is not implemented");
+				throw new IllegalArgumentException("Method '" + method + "' not exists");
 		}
 	}
 
@@ -269,7 +305,7 @@ public class ListVar extends Variable {
 	@Override
 	public void setFinal() {
 		super.setFinal();
-		list = Collections.unmodifiableList(list);
+		list = Collections.unmodifiableSet(list);
 	}
 
 }

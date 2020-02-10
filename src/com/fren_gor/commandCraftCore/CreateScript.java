@@ -48,7 +48,7 @@ import org.reflections.Reflections;
 
 import com.fren_gor.commandCraftCore.utils.Utils;
 import com.fren_gor.commandCraftCore.utils.saveUtils.TripleObject;
-import com.fren_gor.commandCraftCore.vars.Type;
+import com.fren_gor.commandCraftCore.vars.VarType;
 import com.fren_gor.commandCraftCore.vars.VariableManager;
 
 public class CreateScript implements CommandExecutor, TabCompleter {
@@ -65,21 +65,26 @@ public class CreateScript implements CommandExecutor, TabCompleter {
 			"##   $label -> Type: String (command as player wrote it)",
 			"##   $commandName -> Type: String (command name as defined by the plugin)",
 			"##   $args -> Type: List of Stirng (every String is an argument of the command, the argunemt)", "",
-			"!info command &", "!tab prova0 prova1,prova", "", "!return_false");
+			"!info command &", "!tab test0 test1,test2", "", "!return_false");
 	private static List<String> updateCmds = Arrays.asList("## Command Script", "##", "## Variables:",
 			"##   $senderType -> Type: String (PLAYER, CONSOLE or COMMAND_BLOCK)",
 			"##   $senderName -> Type: String (sender name)",
 			"##   $player -> Type: Player (if sender is a player, else type => null)",
 			"##   $label -> Type: String (command as player wrote it)",
 			"##   $commandName -> Type: String (command name as defined by the plugin)",
-			"##   $args -> Type: List of Stirng (every String is an argument of the command, the argunemt)", "");
+			"##   $args -> Type: List of Stirng (every String is an argument of the command)", "");
+	private static List<String> loops = Arrays.asList("## Loop Script", "##", "## Variables:",
+			"##   $timesExecuted -> Type: INT (times the loop has been executed)", "", "");
+	private static List<String> updateLoops = Arrays.asList("## Loop Script", "##", "## Variables:",
+			"##   $timesExecuted -> Type: INT (times the loop has been executed)", "");
+	private static String loopDeclaration = "!info loop ";
 	private static List<String> priorities = Arrays.asList("Lowest", "Low", "Normal", "High", "Highest", "Monitor");
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 		if (args.length == 0) {
-			sender.sendMessage("§cUsage: /createscript <event, command, loop> ...");
+			sender.sendMessage("§cUsage: /createscript <event|command|loop> ...");
 			return false;
 		}
 		if (args[0].equalsIgnoreCase("event")) {
@@ -170,7 +175,7 @@ public class CreateScript implements CommandExecutor, TabCompleter {
 
 			if (CommandCraftCore.getEventManager().getEventVars().containsKey(clazz)
 					&& !CommandCraftCore.getEventManager().getEventVars().get(clazz).isEmpty()) {
-				for (Entry<String, TripleObject<Type, String, BiConsumer<Event, VariableManager>>> e : CommandCraftCore
+				for (Entry<String, TripleObject<VarType, String, BiConsumer<Event, VariableManager>>> e : CommandCraftCore
 						.getEventManager().getEventVars().get(clazz).getHashMap().entrySet()) {
 
 					if (e.getValue().getValue1() != null && !e.getValue().getValue1().isEmpty()) {
@@ -189,7 +194,7 @@ public class CreateScript implements CommandExecutor, TabCompleter {
 			if (isCancellable) {
 				l.add("##   $cancelled -> Type: BOOLEAN (true if the event is cancelled, false if it's not)");
 			} else {
-				l.add("##   $cancelled -> Type: BOOLEAN (everytime false because this event is not cancellable)");
+				l.add("##   $cancelled -> Type: BOOLEAN (initially false because this event is not cancellable)");
 			}
 
 			if (CommandCraftCore.getEventManager().getEventTasks().containsKey(clazz)
@@ -241,7 +246,7 @@ public class CreateScript implements CommandExecutor, TabCompleter {
 
 			if (CommandCraftCore.getCommandManager().getCommands().containsKey(s)
 					|| new File(CommandCraftCore.getInstance().getDataFolder(), s + ".cmc").exists()) {
-				sender.sendMessage("§cA command with name '" + s + "' already exist!");
+				sender.sendMessage("§cA command with name '" + s + "' already exists!");
 				return false;
 			}
 
@@ -285,23 +290,55 @@ public class CreateScript implements CommandExecutor, TabCompleter {
 			sender.sendMessage("§aSuccesfully generated default command script");
 
 		} else if (args[0].equalsIgnoreCase("loop")) {
-			// ----- Temp lines ---------
-			sender.sendMessage("§cComing soon");
-			return false;
-			// -----------------------
-			/*
-			 * try { if (args.length == 2) {
-			 * 
-			 * } else if (args.length == 3) {
-			 * 
-			 * } else {
-			 * sender.sendMessage("§cUsage: /createscript loop <num> [num]");
-			 * return false; } } catch (NumberFormatException e) {
-			 * sender.sendMessage("§cUsage: /createscript loop <num> [num]");
-			 * return false; }
-			 */
+
+			if (args.length < 3) {
+				sender.sendMessage("§cUsage: /createscript loop <loopName> <delay> [period]");
+				return false;
+			}
+
+			String s = args[1];
+
+			if (CommandCraftCore.getLoopManager().getLoops().containsKey(s)
+					|| new File(CommandCraftCore.getInstance().getDataFolder(), s + ".cmc").exists()) {
+				sender.sendMessage("§cA loop with name '" + s + "' already exists!");
+				return false;
+			}
+
+			List<String> toPrint = new ArrayList<>(5);
+			toPrint.addAll(loops);
+
+			if (!args[2].matches("-?(0|[1-9]\\d*)")) {
+				sender.sendMessage("§cInvalid number " + args[2]);
+				return false;
+			}
+
+			if (args.length == 4) {
+
+				if (!args[3].matches("-?(0|[1-9]\\d*)")) {
+					sender.sendMessage("§cInvalid number " + args[2]);
+					return false;
+				}
+
+				toPrint.set(5, loopDeclaration + args[2] + " " + args[3]);
+
+			} else {
+
+				toPrint.set(5, loopDeclaration + args[2]);
+
+			}
+
+			try {
+				writeFile(new File(CommandCraftCore.getInstance().getDataFolder(), s + ".cmc"), toPrint);
+			} catch (IOException e) {
+				sender.sendMessage("§cFailed to generate the default loop script");
+				e.printStackTrace();
+				return false;
+			}
+
+			sender.sendMessage("§aSuccesfully generated default command script");
+
 		} else {
-			sender.sendMessage("§cUsage: /createscript <event, command, loop> ...");
+			sender.sendMessage("§cUsage: /createscript <event|command|loop> ...");
 			return false;
 		}
 		return true;
@@ -398,7 +435,7 @@ public class CreateScript implements CommandExecutor, TabCompleter {
 			}
 
 			for (String s : file) {
-				s = Reader.trim(s);
+				s = s.trim();
 				if (s.startsWith("!info event ")) {
 
 					String st = s.substring(12).split(" ")[0];
@@ -476,7 +513,7 @@ public class CreateScript implements CommandExecutor, TabCompleter {
 
 					if (CommandCraftCore.getEventManager().getEventVars().containsKey(clazz)
 							&& !CommandCraftCore.getEventManager().getEventVars().get(clazz).isEmpty()) {
-						for (Entry<String, TripleObject<Type, String, BiConsumer<Event, VariableManager>>> e : CommandCraftCore
+						for (Entry<String, TripleObject<VarType, String, BiConsumer<Event, VariableManager>>> e : CommandCraftCore
 								.getEventManager().getEventVars().get(clazz).getHashMap().entrySet()) {
 
 							if (e.getValue().getValue1() != null && !e.getValue().getValue1().isEmpty()) {
@@ -520,7 +557,7 @@ public class CreateScript implements CommandExecutor, TabCompleter {
 					try {
 						writeFile(f, l);
 					} catch (IOException e) {
-						sender.sendMessage("§cFailed to create the default event script");
+						sender.sendMessage("§cFailed to update the event script: " + f.getPath());
 						e.printStackTrace();
 						return false;
 					}
@@ -546,7 +583,7 @@ public class CreateScript implements CommandExecutor, TabCompleter {
 					try {
 						writeFile(f, c);
 					} catch (IOException e) {
-						sender.sendMessage("§cFailed to create the default event script");
+						sender.sendMessage("§cFailed to update the command script: " + f.getPath());
 						e.printStackTrace();
 						return false;
 					}
@@ -563,9 +600,33 @@ public class CreateScript implements CommandExecutor, TabCompleter {
 					return true;
 				}
 
-				if (s.startsWith("!info loop")) {
-					sender.sendMessage("§cLoops are not supported yed");
-					return false;
+				if (s.startsWith("!info loop ")) {
+
+					String[] split = s.substring(11).split(" ");
+					String st = split[0];
+
+					if (st.isEmpty()) {
+						sender.sendMessage("§cInvalid '!info' in file §e'" + f.getPath() + "'");
+						return false;
+					}
+
+					List<String> toPrint = new LinkedList<>(updateLoops);
+
+					// toPrint.add(loopDeclaration + (split.length == 1 ?
+					// split[0] : split[0] + " " + split[1]));
+					toPrint.addAll(file);
+
+					try {
+						writeFile(f, toPrint);
+					} catch (IOException e) {
+						sender.sendMessage("§cFailed to update the loop script: " + f.getPath());
+						e.printStackTrace();
+						return false;
+					}
+
+					sender.sendMessage("§aSuccesfully updated file " + st);
+
+					return true;
 				}
 			}
 
@@ -587,7 +648,7 @@ public class CreateScript implements CommandExecutor, TabCompleter {
 
 		boolean info = false;
 		for (String s : l) {
-			String fixed = Reader.trim(s);
+			String fixed = s.trim();
 			if (!fixed.startsWith("##")) {
 				if (!info && fixed.isEmpty())
 					continue;

@@ -35,13 +35,14 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 public class TetraMultiHashMap<K, V1, V2, V3, V4> implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
-	private HashMap<K, TetraObject<V1, V2, V3, V4>> map = new LinkedHashMap<>();
+	private Map<K, TetraObject<V1, V2, V3, V4>> map = new LinkedHashMap<>();
 
 	public boolean isEmpty() {
 		return map.isEmpty();
@@ -90,7 +91,7 @@ public class TetraMultiHashMap<K, V1, V2, V3, V4> implements Serializable {
 		return map.size();
 	}
 
-	public HashMap<K, TetraObject<V1, V2, V3, V4>> getHashMap() {
+	public Map<K, TetraObject<V1, V2, V3, V4>> getHashMap() {
 		return map;
 	}
 
@@ -334,6 +335,31 @@ public class TetraMultiHashMap<K, V1, V2, V3, V4> implements Serializable {
 		b.append("}");
 		return b.toString();
 
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((map == null) ? 0 : map.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (!(obj instanceof TetraMultiHashMap))
+			return false;
+		TetraMultiHashMap<?, ?, ?, ?, ?> other = (TetraMultiHashMap<?, ?, ?, ?, ?>) obj;
+		if (map == null) {
+			if (other.map != null)
+				return false;
+		} else if (!map.equals(other.map))
+			return false;
+		return true;
 	}
 
 }

@@ -38,10 +38,10 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 
 import com.fren_gor.commandCraftCore.CommandCraftCore;
-import com.fren_gor.commandCraftCore.Executor;
 import com.fren_gor.commandCraftCore.Reader;
-import com.fren_gor.commandCraftCore.Reader.Type;
 import com.fren_gor.commandCraftCore.ReflectionUtil;
+import com.fren_gor.commandCraftCore.ScriptType;
+import com.fren_gor.commandCraftCore.executor.Executor;
 import com.fren_gor.commandCraftCore.utils.Utils;
 import com.fren_gor.commandCraftCore.utils.saveUtils.DoubleMultiHashMap;
 import com.fren_gor.commandCraftCore.vars.ListVar;
@@ -53,12 +53,9 @@ public class CommandManager {
 
 	private DoubleMultiHashMap<String, NewCommand, File> commands;
 
-	private File datafolder;
-
 	public CommandManager() {
 
 		commands = new DoubleMultiHashMap<>();
-		datafolder = new File(CommandCraftCore.getInstance().getDataFolder(), "commands");
 
 	}
 
@@ -84,23 +81,23 @@ public class CommandManager {
 	}
 
 	public NewCommand buildCommand(File f) throws IOException {
-		return buildCommand(new Reader(readFile(f), f), f);
+		return buildCommand(new Reader(f), f);
 	}
 
 	public NewCommand buildCommand(Reader reader, File f) throws IOException {
 
-		if (reader.getType() != Type.COMMAND) {
+		if (reader.getType() != ScriptType.COMMAND) {
 			Bukkit.getConsoleSender()
 					.sendMessage("[CommandCraftCore] §cFile " + f.getPath() + " is not a command file");
 			throw new IllegalArgumentException("File " + f.getPath() + " is not a command file");
 		}
 
-		if (reader.getType() != Reader.Type.COMMAND)
+		if (reader.getType() != ScriptType.COMMAND)
 			throw new RuntimeException("Invalid File " + f.getName() + " in Command Folder!");
 
-		String commandName = reader.getName();
-		String perm = reader.getPermission();
-		String[] aliseas = reader.getAliseas();
+		String commandName = reader.getScriptName();
+		String perm = reader.getCommandPermission();
+		String[] aliseas = reader.getCommandAliseas();
 		List<List<String>> tab = reader.getTabCompleter();
 
 		if (tab.isEmpty()) {
@@ -110,7 +107,7 @@ public class CommandManager {
 				@Override
 				public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 
-					Executor e = new Executor();
+					Executor e = new Executor(reader);
 
 					new StringVar(e.getManager(), "commandName", command.getName()).setFinal();
 
@@ -128,13 +125,15 @@ public class CommandManager {
 
 					ListVar v = new ListVar(e.getManager(), "args", args);
 
-					for (String s : args) {
-						v.getValue().add(new StringVar(v.getManager(), v.getManager().generateInternalName(), s));
-					}
+					/*
+					 * for (String s : args) { v.getValue().add(new
+					 * StringVar(v.getManager(),
+					 * v.getManager().generateInternalName(), s)); }
+					 */
 
 					v.setFinal();
 
-					return e.execute(reader);
+					return e.execute();
 
 				}
 
@@ -145,7 +144,7 @@ public class CommandManager {
 				@Override
 				public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 
-					Executor e = new Executor();
+					Executor e = new Executor(reader);
 
 					new StringVar(e.getManager(), "commandName", command.getName()).setFinal();
 
@@ -163,13 +162,15 @@ public class CommandManager {
 
 					ListVar v = new ListVar(e.getManager(), "args", args);
 
-					for (String s : args) {
-						v.getValue().add(new StringVar(v.getManager(), v.getManager().generateInternalName(), s));
-					}
+					/*
+					 * for (String s : args) { v.getValue().add(new
+					 * StringVar(v.getManager(),
+					 * v.getManager().generateInternalName(), s)); }
+					 */
 
 					v.setFinal();
 
-					return e.execute(reader);
+					return e.execute();
 
 				}
 

@@ -22,18 +22,19 @@
 
 package com.fren_gor.commandCraftCore.vars;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
+import java.util.Set;
+
+import com.google.common.collect.Sets;
 
 import lombok.Getter;
 
 public class StringVar extends Variable {
 
 	@Getter
-	private static List<String> list = Collections.unmodifiableList(Arrays.asList("toString", "+", "=", "==", "equals",
-			"equalsIgnoreCase", "clone", "substring", "!substring", "length", "trim", "charAt", "toCharList", "indexOf",
-			"startsWith", "isEmpty", "toUpperCase", "toLowerCase", "split", "endsWith", "type"));
+	private static Set<String> list = Collections.unmodifiableSet(Sets.newHashSet("toString", "+", "=", "!=", "==",
+			"equals", "equalsIgnoreCase", "clone", "substring", "!substring", "length", "trim", "charAt", "toCharList",
+			"indexOf", "startsWith", "isEmpty", "toUpperCase", "toLowerCase", "split", "endsWith", "type"));
 
 	@Getter
 	private String value;
@@ -43,7 +44,7 @@ public class StringVar extends Variable {
 		return "\"" + value + "\"";
 	}
 
-	public String toString1() {
+	public String rawToString() {
 		return value;
 	}
 
@@ -53,7 +54,7 @@ public class StringVar extends Variable {
 	}
 
 	@Override
-	public List<String> getMethods() {
+	public Set<String> getMethods() {
 		return list;
 	}
 
@@ -63,8 +64,8 @@ public class StringVar extends Variable {
 	}
 
 	@Override
-	public Type getType() {
-		return Type.STRING;
+	public VarType getType() {
+		return VarType.STRING;
 	}
 
 	@Override
@@ -73,7 +74,7 @@ public class StringVar extends Variable {
 			case "split":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				if (parameter.getType() != Type.STRING)
+				if (parameter.getType() != VarType.STRING)
 					throw new IllegalArgumentException(
 							parameter.getType().toString().toLowerCase() + " is not a string variable");
 				return new ListVar(manager, manager.generateInternalName(), value.split((String) parameter.get()));
@@ -92,7 +93,7 @@ public class StringVar extends Variable {
 			case "startsWith":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				if (parameter.getType() != Type.STRING)
+				if (parameter.getType() != VarType.STRING)
 					throw new IllegalArgumentException(
 							parameter.getType().toString().toLowerCase() + " is not a string variable");
 				return new BooleanVar(manager, manager.generateInternalName(),
@@ -100,7 +101,7 @@ public class StringVar extends Variable {
 			case "endsWith":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				if (parameter.getType() != Type.STRING)
+				if (parameter.getType() != VarType.STRING)
 					throw new IllegalArgumentException(
 							parameter.getType().toString().toLowerCase() + " is not a string variable");
 				return new BooleanVar(manager, manager.generateInternalName(),
@@ -108,16 +109,15 @@ public class StringVar extends Variable {
 			case "indexOf":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				if (parameter.getType() != Type.STRING)
+				if (parameter.getType() != VarType.STRING)
 					throw new IllegalArgumentException(
 							parameter.getType().toString().toLowerCase() + " is not a string variable");
 				return new IntVar(manager, manager.generateInternalName(), value.indexOf((String) parameter.get()));
 			case "charAt":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				if (parameter.getType() != Type.INT)
-					throw new IllegalArgumentException(
-							parameter.getType().toString().toLowerCase() + " is not an integer variable");
+				if (parameter.getType() != VarType.INT)
+					throw new IllegalArgumentException(parameter.getName() + " is not an integer variable");
 				if ((int) parameter.get() >= value.length()) {
 					throw new IllegalArgumentException(parameter.get()
 							+ " is too hight, it must be at most equal to the string lenght - 1 (in this case "
@@ -135,16 +135,17 @@ public class StringVar extends Variable {
 			case "+":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				return new StringVar(manager, manager.generateInternalName(), value + parameter.toString());
+				return new StringVar(manager, manager.generateInternalName(),
+						value + ((StringVar) parameter).rawToString());
 			case "=":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
 				if (isFinal()) {
 					throw new RuntimeException("Cannot modify a final variable");
 				}
-				if (isConst() && Type.STRING != parameter.getType())
+				if (isConst() && VarType.STRING != parameter.getType())
 					throw new IllegalArgumentException("Cannot change " + name + "'s variable type");
-				if (parameter.getType() == Type.STRING) {
+				if (parameter.getType() == VarType.STRING) {
 					value = (String) parameter.get();
 					return this;
 				}
@@ -161,9 +162,8 @@ public class StringVar extends Variable {
 			case "substring":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				if (parameter.getType() != Type.INT)
-					throw new IllegalArgumentException(
-							parameter.getType().toString().toLowerCase() + " is not an integer variable");
+				if (parameter.getType() != VarType.INT)
+					throw new IllegalArgumentException(parameter.getName() + " is not an integer variable");
 				if ((int) parameter.get() > value.length()) {
 					throw new IllegalArgumentException(parameter.get()
 							+ " is too hight, it must be at most equal to the string lenght (in this case "
@@ -176,9 +176,8 @@ public class StringVar extends Variable {
 			case "!substring":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				if (parameter.getType() != Type.INT)
-					throw new IllegalArgumentException(
-							parameter.getType().toString().toLowerCase() + " is not an integer variable");
+				if (parameter.getType() != VarType.INT)
+					throw new IllegalArgumentException(parameter.getName() + " is not an integer variable");
 				if ((int) parameter.get() < 0) {
 					throw new IllegalArgumentException(parameter.get() + " is too low, it must be at least 0");
 				}
@@ -189,11 +188,18 @@ public class StringVar extends Variable {
 				}
 				return new StringVar(manager, manager.generateInternalName(),
 						value.substring(0, (int) parameter.get()));
+			case "!=":
+				if (parameter == null)
+					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
+				if (parameter.getType() == VarType.STRING) {
+					return new BooleanVar(manager, manager.generateInternalName(), !parameter.get().equals(value));
+				} else
+					return new BooleanVar(manager, manager.generateInternalName(), true);
 			case "==":
 			case "equals":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				if (parameter.getType() == Type.STRING) {
+				if (parameter.getType() == VarType.STRING) {
 					return new BooleanVar(manager, manager.generateInternalName(), parameter.get().equals(value));
 				} else
 					return new BooleanVar(manager, manager.generateInternalName(), false);
@@ -201,7 +207,7 @@ public class StringVar extends Variable {
 			case "equalsIgnoreCase":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				if (parameter.getType() == Type.STRING) {
+				if (parameter.getType() == VarType.STRING) {
 					return new BooleanVar(manager, manager.generateInternalName(),
 							((String) parameter.get()).equalsIgnoreCase(value));
 				} else {
@@ -220,7 +226,7 @@ public class StringVar extends Variable {
 					throw new IllegalArgumentException("The method ' " + method + " ' cannot have any parameters");
 				return clone();
 			default:
-				return this;
+				throw new IllegalArgumentException("Method '" + method + "' not exists");
 		}
 	}
 

@@ -199,4 +199,41 @@ public class TripleObject<K, V1, V2> implements Serializable {
 		b.append("<");
 		return b.toString();
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((o1 == null) ? 0 : o1.hashCode());
+		result = prime * result + ((o2 == null) ? 0 : o2.hashCode());
+		result = prime * result + ((o3 == null) ? 0 : o3.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (!(obj instanceof TripleObject))
+			return false;
+		TripleObject<?, ?, ?> other = (TripleObject<?, ?, ?>) obj;
+		if (o1 == null) {
+			if (other.o1 != null)
+				return false;
+		} else if (!o1.equals(other.o1))
+			return false;
+		if (o2 == null) {
+			if (other.o2 != null)
+				return false;
+		} else if (!o2.equals(other.o2))
+			return false;
+		if (o3 == null) {
+			if (other.o3 != null)
+				return false;
+		} else if (!o3.equals(other.o3))
+			return false;
+		return true;
+	}
 }

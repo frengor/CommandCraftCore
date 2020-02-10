@@ -22,25 +22,26 @@
 
 package com.fren_gor.commandCraftCore.vars;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
+import java.util.Set;
+
+import com.google.common.collect.Sets;
 
 import lombok.Getter;
 
 public class NullVar extends Variable {
 
 	@Getter
-	private static List<String> list = Collections
-			.unmodifiableList(Arrays.asList("toString", "==", "equals", "=", "!=", "type"));
+	private static Set<String> list = Collections
+			.unmodifiableSet(Sets.newHashSet("toString", "==", "equals", "=", "!=", "type"));
 
 	public NullVar(VariableManager m, String name) {
 		super(m, name);
 	}
 
 	@Override
-	public Type getType() {
-		return Type.NULL;
+	public VarType getType() {
+		return VarType.NULL;
 	}
 
 	@Override
@@ -54,7 +55,7 @@ public class NullVar extends Variable {
 	}
 
 	@Override
-	public List<String> getMethods() {
+	public Set<String> getMethods() {
 		return list;
 	}
 
@@ -73,16 +74,16 @@ public class NullVar extends Variable {
 			case "!=":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				return new BooleanVar(manager, manager.generateInternalName(), parameter.getType() != Type.NULL);
+				return new BooleanVar(manager, manager.generateInternalName(), parameter.getType() != VarType.NULL);
 			case "=":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
 				if (isFinal()) {
 					throw new RuntimeException("Cannot modify a final variable");
 				}
-				if (isConst() && Type.NULL != parameter.getType())
+				if (isConst() && VarType.NULL != parameter.getType())
 					throw new IllegalArgumentException("Cannot change " + name + "'s variable type");
-				if (parameter.getType() != Type.NULL) {
+				if (parameter.getType() != VarType.NULL) {
 					manager.vars.remove(name);
 					return manager.craftVariable(name, parameter.get(), parameter.getType());
 				}
@@ -92,7 +93,7 @@ public class NullVar extends Variable {
 			case "equals":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				return new BooleanVar(manager, manager.generateInternalName(), parameter.getType() == Type.NULL);
+				return new BooleanVar(manager, manager.generateInternalName(), parameter.getType() == VarType.NULL);
 
 			default:
 				throw new RuntimeException("Cannot invoke any method on a null variable!");

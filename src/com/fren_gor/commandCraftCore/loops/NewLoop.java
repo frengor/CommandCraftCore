@@ -25,14 +25,16 @@ package com.fren_gor.commandCraftCore.loops;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import com.fren_gor.commandCraftCore.CommandCraftCore;
-import com.fren_gor.commandCraftCore.Executor;
 import com.fren_gor.commandCraftCore.Reader;
-import com.fren_gor.commandCraftCore.Reader.Type;
+import com.fren_gor.commandCraftCore.ScriptType;
+import com.fren_gor.commandCraftCore.executor.Executor;
+import com.fren_gor.commandCraftCore.vars.IntVar;
 
 public class NewLoop extends BukkitRunnable {
 
 	private final String name;
 	private final Reader r;
+	private int timesExecuted = 0;
 
 	public String getName() {
 		return name;
@@ -46,18 +48,19 @@ public class NewLoop extends BukkitRunnable {
 
 		this.r = r;
 
-		if (r.getType() != Type.LOOP)
-			throw new IllegalArgumentException("Invalid type :" + r.getType() + ". Only LOOP is admitted!");
+		if (r.getType() != ScriptType.LOOP)
+			throw new IllegalArgumentException("Invalid type: " + r.getType() + ". Only LOOP is admitted!");
 
-		this.name = r.getName();
+		this.name = r.getScriptName();
 
-		if (r.getLoopInfo().getValue() == Integer.MIN_VALUE) {
+		if (r.getLoopInfo().getValue() == -1L) {
 
-			runTaskLater(CommandCraftCore.getInstance(), r.getLoopInfo().getKey());
+			r.setRunnable(runTaskLater(CommandCraftCore.getInstance(), r.getLoopInfo().getKey()));
 
 		} else {
 
-			runTaskTimer(CommandCraftCore.getInstance(), r.getLoopInfo().getKey(), r.getLoopInfo().getValue());
+			r.setRunnable(
+					runTaskTimer(CommandCraftCore.getInstance(), r.getLoopInfo().getKey(), r.getLoopInfo().getValue()));
 
 		}
 
@@ -66,7 +69,13 @@ public class NewLoop extends BukkitRunnable {
 	@Override
 	public void run() {
 
-		new Executor().execute(r);
+		Executor e = new Executor(r);
+
+		timesExecuted++;
+
+		new IntVar(e.getManager(), "$timesExecuted", timesExecuted);
+
+		e.execute();
 
 	}
 

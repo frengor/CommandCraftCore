@@ -198,4 +198,35 @@ public class VariableMap implements Map<String, Variable> {
 		return s.startsWith("$internal_");
 	}
 
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((cleanMap == null) ? 0 : cleanMap.hashCode());
+		result = prime * result + ((map == null) ? 0 : map.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (!(obj instanceof VariableMap))
+			return false;
+		VariableMap other = (VariableMap) obj;
+		if (cleanMap == null) {
+			if (other.cleanMap != null)
+				return false;
+		} else if (!cleanMap.equals(other.cleanMap))
+			return false;
+		if (map == null) {
+			if (other.map != null)
+				return false;
+		} else if (!map.equals(other.map))
+			return false;
+		return true;
+	}
+
 }

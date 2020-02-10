@@ -1,6 +1,6 @@
 //  MIT License
 //  
-//  Copyright (c) 2019 fren_gor
+//  Copyright (c) 2020 fren_gor
 //  
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -23,868 +23,581 @@
 package com.fren_gor.commandCraftCore;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
-
-import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.event.EventPriority;
+import org.bukkit.scheduler.BukkitTask;
 
-import com.fren_gor.commandCraftCore.LineType.TypeLine;
-import com.fren_gor.commandCraftCore.utils.saveUtils.DoubleMultiHashMap;
+import com.fren_gor.commandCraftCore.exceptions.ReaderException;
+import com.fren_gor.commandCraftCore.lines.CancelBooleanLine;
+import com.fren_gor.commandCraftCore.lines.CancelLine;
+import com.fren_gor.commandCraftCore.lines.CommandLine;
+import com.fren_gor.commandCraftCore.lines.GotoLine;
+import com.fren_gor.commandCraftCore.lines.IfLine;
+import com.fren_gor.commandCraftCore.lines.Line;
+import com.fren_gor.commandCraftCore.lines.ReturnBooleanLine;
+import com.fren_gor.commandCraftCore.lines.ReturnLine;
+import com.fren_gor.commandCraftCore.lines.VarLine;
+import com.fren_gor.commandCraftCore.lines.WaitLine;
+import com.fren_gor.commandCraftCore.lines.controlFlow.ControlFlowStatement;
+import com.fren_gor.commandCraftCore.lines.controlFlow.ControlFlowType;
+import com.fren_gor.commandCraftCore.lines.controlFlow.ElseStatement;
+import com.fren_gor.commandCraftCore.lines.controlFlow.IfStatement;
+import com.fren_gor.commandCraftCore.utils.Utils;
 import com.fren_gor.commandCraftCore.utils.saveUtils.DoubleObject;
+
+import lombok.Getter;
 
 public class Reader {
 
-	public enum Type {
-		COMMAND, EVENT, LOOP;
+	@Getter
+	private ScriptType type = null;
+	@Getter
+	private String scriptName;
+	@Getter
+	private EventPriority eventPriority;
+	@Getter
+	private String[] commandAliseas = new String[0];
+	@Getter
+	private String commandPermission = "";
+	@Getter
+	private List<List<String>> tabCompleter = new ArrayList<>();
+	@Getter
+	// -ExecutionLineNum--Line
+	private Map<Integer, Line> lines = new HashMap<>();
+	@Getter
+	private File file;
+	@Getter
+	private DoubleObject<Long, Long> loopInfo = new DoubleObject<>();
+	@Getter
+	private String eventName = "";
+	@Getter
+	private BukkitTask runnable = null;
+	private boolean continueReading = true;
+	private int currentLine = 0;
+
+	public void setRunnable(BukkitTask runnable) {
+		this.runnable = runnable;
 	}
 
-	private Type type;
-	private String name;
-	private EventPriority priority;
-	private String[] aliseas = new String[0];
-	private String permission = "";
-	private List<List<String>> tabCompleter = new ArrayList<>();
-	private DoubleMultiHashMap<Integer, LineType, String> lines = new DoubleMultiHashMap<>();
-	private File file;
-	private int length;
-	private DoubleObject<Integer, Integer> loopInfo = new DoubleObject<>();
-	private String eventName = "";
-
-	public Reader(List<String> l, File f) {
+	public Reader(File f) {
 
 		long time = System.currentTimeMillis();
-		file = f;
-		int line = 1;
-		int last = 0;
-		int ifnum = 0;
-		boolean b = false;
+		int executionLine = 0;
 		boolean isReturned = false;
-		length = getLenght(l);
 		boolean inWait = false;
 
-		Deque<Integer> deque = new ArrayDeque<>();
-		deque.addFirst(-1);
-		deque.addFirst(0);
+		file = f;
 
-		for (String s : l) {
+		List<String> l = null;
+		try {
+			l = CommandCraftCore.readFile(f);
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
 
-			s = trim(s);
+		Deque<ControlFlowStatement> controlFlow = new ArrayDeque<>();
 
-			if (s.isEmpty())
-				continue;
+		Iterator<String> it = l.iterator();
 
-			line++;
+		main: while (continueReading && it.hasNext()) {
 
-			if (s.startsWith("#") || s.isEmpty()) {
-				continue;
-			}
+			try {
 
-			s = ChatColor.translateAlternateColorCodes('&', s);
+				String currentString = it.next().trim();
 
-			if (isReturned) {
-				Bukkit.getConsoleSender().sendMessage(
-						"[CommandCraftCore] §cUnreachable code! §7File: " + f.getPath() + " §6Line: §e" + line);
-				lines.clear();
-				return;
-			}
+				currentLine++;
 
-			if (s.startsWith("$") || s.startsWith("@")) {
-				if (!b) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cBefore \'!info\' only comments are allowed! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
+				// Checking comments or empty lines
+				if (currentString.startsWith("#") || currentString.isEmpty()) {
+					continue;
 				}
 
-				try {
-					LineType ll = new LineType(TypeLine.VAR, last);
+				// Checking !info and !tab before others lines, since they
+				// aren't
+				// executed and are !info is the first line to put
+				if (currentString.startsWith("!info")) {
 
-					lines.put(line, ll, trim(s));
-
-				} catch (Exception e) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cInvalid inizialization of TypeLine! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-				continue;
-			}
-
-			if (s.startsWith("/") || s.startsWith("\\")) {
-
-				if (!b) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cBefore \'!info\' only comments are allowed! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-				try {
-					lines.put(line, new LineType(TypeLine.COMMAND, last), s);
-				} catch (Exception e) {
-					e.printStackTrace();
-					lines.clear();
-					return;
-				}
-
-			} else if (s.startsWith("(")) {
-
-				if (!b) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cBefore \'!info\' only comments are allowed! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-				DoubleObject<LineType, String> cmd = getCommand(s);
-
-				if (cmd != null) {
-
-					try {
-
-						cmd.getKey().i = last;
-						lines.put(line, cmd.getKey(), cmd.getValue());
-
-					} catch (Exception e) {
-						Bukkit.getConsoleSender().sendMessage("[CommandCraftCore] §cError in §f\'" + s
-								+ "\'§c! §7File: " + f.getPath() + " §6Line: §e" + line);
-						lines.clear();
+					if (type != null) {
+						throwError("Only one '!info' is admitted");
 						return;
 					}
 
-				} else {
-
-					Bukkit.getConsoleSender().sendMessage("[CommandCraftCore] §cInvalid option §f\'" + s
-							+ "\'§c! §7File: " + f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-
-				}
-
-			} else if (s.startsWith("!info ")) {
-
-				if (b) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cOnly one \'!info\' is admitted! §7File: " + f.getPath()
-									+ " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-				b = true;
-
-				String[] split = s.split(" ");
-
-				if (split.length < 3) {
-					Bukkit.getConsoleSender().sendMessage("[CommandCraftCore] §cInvaild \'!info\': " + s + "! §7File: "
-							+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-				try {
-					type = Type.valueOf(split[1].toUpperCase());
-				} catch (Exception e) {
-
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cCannot recognize \'!info\' parameter: \'" + split[1]
-									+ "\'! §7File: " + f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-
-				}
-				if (type == Type.COMMAND) {
-
-					name = split[2];
-
-					if (split.length == 4)
-						permission = split[3];
-
-					if (split.length > 4) {
-						permission = split[3];
-						String[] a = new String[split.length - 4];
-
-						for (int ii = 4; ii < split.length; ii++) {
-							a[ii - 4] = split[ii];
-						}
-
-						aliseas = a;
-
+					if (!Utils.check(currentString, "!info ")) {
+						System.out.println(currentString);
+						throwError("Invaild '!info'");
+						return;
 					}
 
-				} else if (type == Type.EVENT) {
+					String[] split = currentString.split(" ");
 
-					name = file.getName().substring(0, file.getName().length() - 4);
-					eventName = split[2];
-
-					if (split.length == 4)
-						priority = EventPriority.valueOf(split[3].toUpperCase());
-					else
-						priority = EventPriority.NORMAL;
-
-				} else if (type == Type.LOOP) {
-
-					name = file.getName().substring(0, file.getName().length() - 4);
+					if (split.length < 3) {
+						throwError("Invaild '!info' parameters");
+						return;
+					}
 
 					try {
+						type = ScriptType.valueOf(split[1].toUpperCase());
+					} catch (Exception e) {
+						throwError("Cannot recognize '!info' parameter: '" + split[1] + "'");
+						return;
+					}
+
+					if (type == ScriptType.COMMAND) {
+
+						scriptName = split[2];
+
+						if (split.length == 4)
+							commandPermission = split[3];
+
+						if (split.length > 4) {
+							commandPermission = split[3];
+							String[] a = new String[split.length - 4];
+
+							for (int ii = 4; ii < split.length; ii++) {
+								a[ii - 4] = split[ii];
+							}
+
+							commandAliseas = a;
+						}
+
+						// Looking for !tab
+						int linesToSkip = 0;
+						int linesOfCode = 0;
+						for (int i = currentLine; i < l.size(); i++) {
+							linesToSkip++;
+							String li = l.get(i).trim();
+							if (li.isEmpty() || li.startsWith("#")) {
+								continue;
+							}
+							linesOfCode++;
+							if (li.startsWith("!tab")) {
+
+								if (linesOfCode > 1) {
+									throwError(
+											"'!tab' must be put right below the '!info' without any code line in between",
+											currentLine + linesToSkip);
+									return;
+								}
+
+								if (!Utils.check(li, "!tab ")) {
+									throwError("Invalid '!tab'" + linesToSkip);
+									return;
+								}
+
+								tabCompleter.clear();
+
+								String[] split1 = li.split(" ");
+
+								for (int ii = 1; ii < split1.length; ii++) {
+
+									String[] ss = split1[ii].split(",");
+									List<String> list = new ArrayList<>(ss.length);
+
+									for (String st : ss) {
+
+										list.add(st);
+
+									}
+
+									tabCompleter.add(list);
+
+								}
+
+								// Skip lines to !tab
+								for (int n = 0; n < linesToSkip; n++) {
+									it.next();
+								}
+
+								continue main;
+							}
+						}
+
+					} else if (type == ScriptType.EVENT) {
+
+						scriptName = file.getName().substring(0, file.getName().length() - 4);
+						eventName = split[2];
+
+						if (split.length == 4)
+							eventPriority = EventPriority.valueOf(split[3].toUpperCase());
+						else
+							eventPriority = EventPriority.NORMAL;
+
+					} else if (type == ScriptType.LOOP) {
+
+						scriptName = file.getName().substring(0, file.getName().length() - 4);
+
+						if (!Utils.isInteger(split[2])) {
+							throwError("Invaild loop declaration");
+							return;
+						}
+
+						long n = Long.valueOf(split[2]);
+
+						if (n < 0) {
+							throwError("Invaild loop: delay must be positive");
+							return;
+						}
+
 						if (split.length == 3) {
 
-							loopInfo.put(Integer.valueOf(split[2]), Integer.MIN_VALUE);
+							loopInfo.put(n, -1L);
+
+							if (loopInfo.getKey() < 0) {
+								throwError("Invaild loop: delay must be positive");
+								return;
+							}
 
 						} else if (split.length == 4) {
 
-							loopInfo.put(Integer.valueOf(split[2]), Integer.valueOf(split[3]));
+							if (!Utils.isInteger(split[3])) {
+								throwError("Invaild loop declaration");
+								return;
+							}
+
+							long nn = Long.valueOf(split[3]);
+
+							if (nn < 0) {
+								throwError("Invaild loop: period must be positive");
+								return;
+							}
+
+							loopInfo.put(n, nn);
+
+							if (loopInfo.getKey() < 0) {
+								throwError("Invaild loop: delay must be positive");
+								return;
+							}
+
+							if (loopInfo.getValue() < 0) {
+								throwError("Invaild loop: period must be positive");
+								return;
+							}
 
 						} else {
-							Bukkit.getConsoleSender()
-									.sendMessage("[CommandCraftCore] §cInvaild \'!info\': " + s
-											+ " §8(\'!info loop <number> [number]\')§c ! §7File: " + f.getPath()
-											+ " §6Line: §e" + line);
-							lines.clear();
+							throwError("Invaild loop declaration");
 							return;
 						}
-					} catch (NumberFormatException e) {
 
-						Bukkit.getConsoleSender()
-								.sendMessage("[CommandCraftCore] §cInvaild \'!info\': " + s
-										+ " §8(\'!info loop <number> [number]\')§c ! §7File: " + f.getPath()
-										+ " §6Line: §e" + line);
-						lines.clear();
-						return;
-
-					}
-
-					if ((loopInfo.getValue() < 0 && loopInfo.getValue() != Integer.MIN_VALUE)
-							|| loopInfo.getKey() < 0) {
-						Bukkit.getConsoleSender().sendMessage("[CommandCraftCore] §cInvaild \'!info\': " + s
-								+ ". Numbers must be positives! §7File: " + f.getPath() + " §6Line: §e" + line);
-						lines.clear();
+					} else {
+						throwError("Invalid '!info' type");
 						return;
 					}
 
-				} else {
-					Bukkit.getConsoleSender().sendMessage(
-							"[CommandCraftCore] §cInvalid type! §7File: " + f.getPath() + " §6Line: §e" + line);
-					lines.clear();
+					continue;
+				}
+
+				if (type == null) {
+					throwError("Before '!info' only comments are allowed");
 					return;
 				}
 
-				try {
-					lines.put(line, new LineType(TypeLine.INFO), s);
-				} catch (Exception e) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cInvalid inizialization of TypeLine! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
+				// Already checked in !info command check
+				if (currentString.startsWith("!tab")) {
 
-			} else if (s.startsWith("!tab ")) {
-
-				if (!b) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cBefore the !info only comments are allowed! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-				if (type != Type.COMMAND) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §c\'!tab\' is allowed only in command files! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-				tabCompleter.clear();
-
-				String[] split = s.split(" ");
-
-				for (int ii = 1; ii < split.length; ii++) {
-
-					String[] ss = split[ii].split(",");
-					List<String> list = new ArrayList<>(ss.length);
-
-					for (String st : ss) {
-
-						list.add(st);
-
+					if (type != ScriptType.COMMAND) {
+						throwError("'!tab' is allowed only in command scripts");
+						return;
 					}
 
-					tabCompleter.add(list);
-
-				}
-
-				/*
-				 * try { lines.put(line, new LineType(TypeLine.TAB), s); } catch
-				 * (Exception e) { Bukkit.getConsoleSender()
-				 * .sendMessage("[CommandCraftCore] §cInvalid inizialization of TypeLine! §7File: "
-				 * + f.getPath() + " §6Line: §e" + line); lines.clear(); return;
-				 * }
-				 */
-
-			} else if (s.startsWith("!wait ")) {
-
-				if (!b) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cBefore \'!info\' only comments are allowed! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
+					throwError("Only one '!tab' per script is allowed");
 					return;
 				}
 
-				if (type != Type.EVENT) {
+				executionLine++;
 
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §c\'!wait\' is allowed only in events! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
+				if (currentString.startsWith("!if")) {
+
+					if (!Utils.check(currentString, "!if ")) {
+						throwError("Invalid '!if'");
+						return;
+					}
+
+					IfLine line = new IfLine(this, currentLine, currentString.substring(4).trim());
+
+					controlFlow.add(new IfStatement(line));
+
+					lines.put(executionLine, line);
+
+					isReturned = false;
+
+					continue;
+				}
+
+				if (currentString.startsWith("!elseif")) {
+
+					if (!Utils.check(currentString, "!elseif ")) {
+						throwError("Invalid '!elseif'");
+						return;
+					}
+
+					if (controlFlow.size() == 0 || controlFlow.getLast().getType() != ControlFlowType.IF) {
+						throwError("There must be an '!if' statement before an '!elseif'");
+						return;
+					}
+
+					IfLine line = new IfLine(this, currentLine, currentString.substring(8).trim());
+					GotoLine g = new GotoLine(this, currentLine);
+
+					IfStatement old = (IfStatement) controlFlow.pollLast();
+
+					controlFlow.add(new IfStatement(line, g, old.getGotoLines()));
+
+					lines.put(executionLine, g);
+					lines.put(++executionLine, line);
+
+					old.setElseLine(executionLine);
+
+					isReturned = false;
+
+					continue;
+				}
+
+				if (currentString.equals("!else")) {
+
+					if (controlFlow.size() == 0 || controlFlow.getLast().getType() != ControlFlowType.IF) {
+						throwError("There must be an '!if' or '!elseif' statement before an '!else'");
+						return;
+					}
+
+					GotoLine g = new GotoLine(this, currentLine);
+
+					IfStatement old = (IfStatement) controlFlow.pollLast();
+
+					controlFlow.add(new ElseStatement(g, old.getGotoLines()));
+
+					lines.put(executionLine, g);
+
+					old.setElseLine(executionLine + 1);
+
+					isReturned = false;
+
+					continue;
+				}
+
+				if (currentString.equals("!break")) {
+
+					if (controlFlow.size() == 0 || (controlFlow.getLast().getType() != ControlFlowType.IF
+							&& controlFlow.getLast().getType() != ControlFlowType.ELSE)) {
+						throwError("There must be an '!if' or '!elseif' statement before an '!else'");
+						return;
+					}
+
+					ControlFlowStatement c = controlFlow.pollLast();
+
+					for (GotoLine g : c.getGotoLines()) {
+						g.setGotoLine(executionLine);
+					}
+
+					executionLine--;
+
+					isReturned = false;
+
+					continue;
+				}
+
+				if (isReturned) {
+					throwError("Unreachable line");
 					return;
 				}
 
-				// TODO
-				try {
-					int i = Integer.parseInt(s.substring(6));
-					LineType t = new LineType(i, last);
-					lines.put(line, t, s);
+				if (currentString.startsWith("/") || currentString.startsWith("\\") || currentString.startsWith("(")) {
+
+					lines.put(executionLine, new CommandLine(this, currentLine, currentString));
+
+					continue;
+				}
+
+				if (currentString.startsWith("!var") || currentString.startsWith("$")
+						|| currentString.startsWith("@")) {
+
+					lines.put(executionLine, new VarLine(this, currentLine, currentString));
+
+					continue;
+				}
+
+				if (currentString.equals("!return")) {
+					lines.put(executionLine, new ReturnLine(this, currentLine));
+					isReturned = true;
+					continue;
+				}
+				if (currentString.equals("!return_true")) {
+					lines.put(executionLine, new ReturnBooleanLine(this, currentLine, true));
+					isReturned = true;
+					continue;
+				}
+				if (currentString.equals("!return_false")) {
+					lines.put(executionLine, new ReturnBooleanLine(this, currentLine, false));
+					isReturned = true;
+					continue;
+				}
+
+				if (currentString.equals("!cancel")) {
+					if (inWait) {
+						throwError("Cannot use '!cancel' after '!wait'");
+					}
+					lines.put(executionLine, new CancelLine(this, currentLine));
+					continue;
+				}
+				if (currentString.equals("!cancel_true")) {
+					if (inWait) {
+						throwError("Cannot use '!cancel_true' after '!wait'");
+					}
+					lines.put(executionLine, new CancelBooleanLine(this, currentLine, true));
+					continue;
+				}
+				if (currentString.equals("!cancel_false")) {
+					if (inWait) {
+						throwError("Cannot use '!cancel_false' after '!wait'");
+					}
+					lines.put(executionLine, new CancelBooleanLine(this, currentLine, true));
+					continue;
+				}
+
+				if (currentString.startsWith("!wait")) {
+
+					if (!Utils.check(currentString, "!wait ")) {
+						throwError("Invalid '!wait'");
+						return;
+					}
+
+					String ticks = currentString.substring(6).trim();
+
+					if (!Utils.isInteger(ticks)) {
+						throwError("Invalid '!wait' ticks");
+						return;
+					}
+
 					inWait = true;
-				} catch (Exception e) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cInvalid inizialization of TypeLine! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
 
-			} else if (s.startsWith("!if ")) {
-
-				if (!b) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cBefore \'!info\' only comments are allowed! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-				String ss = s.substring(4);
-
-				if (!(ss.startsWith("/") || ss.startsWith("\\"))) {// TODO
-					/*
-					 * Bukkit.getConsoleSender()
-					 * .sendMessage("[CommandCraftCore] §cInvalid \'!if\' command. There are no \'/\'! §7File: "
-					 * + f.getPath() + " §6Line: §e" + line); lines.clear();
-					 * return;
-					 */
-
-					try {
-						int in = ++ifnum;
-						deque.addFirst(in);
-						LineType ll = new LineType(TypeLine.VAR_IF, last);
-						ll.ifnum = ifnum;
-						lines.put(line, ll, ss);
-
-						last = in;
-					} catch (Exception e) {
-						Bukkit.getConsoleSender()
-								.sendMessage("[CommandCraftCore] §cInvalid inizialization of TypeLine! §7File: "
-										+ f.getPath() + " §6Line: §e" + line);
-						lines.clear();
-						return;
-					}
-
+					lines.put(executionLine, new WaitLine(this, currentLine, Long.parseLong(ticks)));
 					continue;
 				}
 
-				try {
-					int in = ++ifnum;
-					deque.addFirst(in);
-					LineType ll = new LineType(TypeLine.IF, last);
-					ll.ifnum = ifnum;
-					lines.put(line, ll, ss);
-
-					last = in;
-				} catch (Exception e) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cInvalid inizialization of TypeLine! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-			} else if (s.equalsIgnoreCase("!else")) {
-
-				if (!b) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cBefore \'!info\' only comments are allowed! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-				try {
-
-					last = last * -1;
-
-					lines.put(line, new LineType(TypeLine.ELSE, last), s);
-
-					deque.removeFirst();
-					deque.addFirst(last);
-
-				} catch (Exception e) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cInvalid inizialization of TypeLine! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-			} else if (s.equalsIgnoreCase("!break")) {
-
-				if (!b) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cBefore \'!info\' only comments are allowed! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-				if (last == 0) {
-					Bukkit.getConsoleSender().sendMessage("[CommandCraftCore] §cToo many \'break\' statements! §7File: "
-							+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-				try {
-
-					lines.put(line, new LineType(TypeLine.BREAK, deque.removeFirst()), s);
-
-					last = deque.getFirst();
-
-				} catch (Exception e) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cInvalid inizialization of TypeLine! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-			} else if (s.equalsIgnoreCase("!return")) {
-
-				if (!b) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cBefore \'!info\' only comments are allowed! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-				if (type == Type.COMMAND) {
-					Bukkit.getConsoleSender().sendMessage(
-							"[CommandCraftCore] §cOnly in commands \'return_true\' and \'return_false\' are allowed! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-			} else if (s.startsWith("!loop") || s.equals("!stop") || s.equals("!continue")) {
-				// TODO
-
-				Bukkit.getConsoleSender().sendMessage("[CommandCraftCore] §cLoops aren't supported yet! §7File: "
-						+ f.getPath() + " §6Line: §e" + line);
-				lines.clear();
+				throwError("Can't recognize '" + currentString + "'");
 				return;
 
-				/*
-				 * if (!b) { Bukkit.getConsoleSender()
-				 * .sendMessage("[CommandCraftCore] §cBefore \'!info\' only comments are allowed! §7File: "
-				 * + f.getPath() + " §6Line: §e" + line); lines.clear(); return;
-				 * }
-				 * 
-				 * try { ifnum++; int in = ifnum; deque.addFirst(in); LineType
-				 * ll = new LineType(TypeLine.LOOP, last); ll.ifnum = ifnum;
-				 * lines.put(line, ll, s.substring(6));
-				 * 
-				 * last = in;
-				 * 
-				 * } catch (Exception e) { Bukkit.getConsoleSender()
-				 * .sendMessage("[CommandCraftCore] §cInvalid inizialization of TypeLine! §7File: "
-				 * + f.getPath() + " §6Line: §e" + line); lines.clear(); return;
-				 * }
-				 */
-			} else if (s.startsWith("!var ")) {
-
-				if (!b) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cBefore \'!info\' only comments are allowed! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-				try {
-					LineType ll = new LineType(TypeLine.VAR, last);
-
-					lines.put(line, ll, trim(s.substring(5)));
-
-				} catch (Exception e) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cInvalid inizialization of TypeLine! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-			} else if (s.equalsIgnoreCase("!cancel_false")) {
-
-				if (!b) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cBefore \'!info\' only comments are allowed! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-				if (inWait) {
-					Bukkit.getConsoleSender().sendMessage(
-							"[CommandCraftCore] §cCannot cancel an event after the wait call, skipping this line! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					continue;
-				}
-
-				if (type == Type.COMMAND) {
-					Bukkit.getConsoleSender().sendMessage(
-							"[CommandCraftCore] §c\'!cancel_true\' and \'!cancel_false\' are allowed only in events! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-				try {
-
-					lines.put(line, new LineType(TypeLine.CANCEL_FALSE, last), s);
-
-				} catch (Exception e) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cInvalid inizialization of TypeLine! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-			} else if (s.equalsIgnoreCase("!cancel_true")) {
-
-				if (!b) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cBefore \'!info\' only comments are allowed! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-				if (inWait) {
-					Bukkit.getConsoleSender().sendMessage(
-							"[CommandCraftCore] §cCannot uncancel an event after the \'!wait\' call, skipping this line! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					continue;
-				}
-
-				if (type == Type.COMMAND) {
-					Bukkit.getConsoleSender().sendMessage(
-							"[CommandCraftCore] §c\'!cancel_true\' and \'!cancel_false\' are allowed only in events! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-				try {
-
-					lines.put(line, new LineType(TypeLine.CANCEL_TRUE, last), s);
-
-				} catch (Exception e) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cInvalid inizialization of TypeLine! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-			} else if (s.equalsIgnoreCase("!return_false")) {
-
-				if (!b) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cBefore \'!info\' only comments are allowed! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-				if (type == Type.EVENT) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cIn events only 'return\' is allowed! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-				try {
-
-					lines.put(line, new LineType(TypeLine.RETURN_FALSE, deque.removeFirst()), s);
-
-					last = line == length ? 0 : deque.getFirst();
-
-					if (last == -1) {
-						isReturned = true;
-					}
-
-				} catch (Exception e) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cInvalid inizialization of TypeLine! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-			} else if (s.equalsIgnoreCase("!return_true")) {
-
-				if (!b) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cBefore \'!info\' only comments are allowed! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-				try {
-
-					lines.put(line, new LineType(TypeLine.RETURN_TRUE, deque.removeFirst()), s);
-
-					last = line == length ? 0 : deque.getFirst();
-
-					if (last == -1) {
-						isReturned = true;
-					}
-
-				} catch (Exception e) {
-					Bukkit.getConsoleSender()
-							.sendMessage("[CommandCraftCore] §cInvalid inizialization of TypeLine! §7File: "
-									+ f.getPath() + " §6Line: §e" + line);
-					lines.clear();
-					return;
-				}
-
-			} else {
-				Bukkit.getConsoleSender().sendMessage("[CommandCraftCore] §cInvalid option §f\'" + s + "\'§c! §7File: "
-						+ f.getPath() + " §6Line: §e" + line);
-				lines.clear();
-				return;
+			} catch (ReaderException e) {
+				e.printStackTrace();
+			} catch (Exception e) {
+				throwError(e.getMessage());
 			}
 
 		}
 
-		if (last != 0) {
-
-			if (last != -1 && !lines.getValue1(length).getType().toString().contains("RETURN")) {
-
-				Bukkit.getConsoleSender().sendMessage(
-						"[CommandCraftCore] §cUnbalanced \'if\', \'else\', \'break\' and \'return\' statements! §7File: "
-								+ f.getPath() + " §6Line: §e" + line);
-				lines.clear();
-				return;
-
-			}
-
+		if (controlFlow.size() != 0) {
+			if (controlFlow.size() == 1)
+				throwError("A '!break' keyword is missing");
+			else
+				throwError(controlFlow.size() + " '!break' keywords are missing");
+			return;
 		}
 
-		if (ConfigManager.isActiveViewExecuteTime()) {
+		if (type == ScriptType.COMMAND && !checkCommandReturn(1)) {
+			throwError("Commands must return true or false");
+			return;
+		}
+
+		if (ConfigManager.isActiveViewReadingTime()) {
 
 			long ms = System.currentTimeMillis() - time;
 
-			Bukkit.getConsoleSender().sendMessage("Readed file " + f.getName() + " in -> " + ms + " ms");
+			Bukkit.getConsoleSender().sendMessage("§eReaded file §7" + f.getName() + " §ein §7" + ms + " ms");
 
 		}
 
+		// Bukkit.getLogger().info(toString());
+
 	}
 
-	public String getEventName() {
-		return eventName;
-	}
+	private boolean checkCommandReturn(int startLine) {
 
-	public DoubleObject<Integer, Integer> getLoopInfo() {
-		return loopInfo;
-	}
-
-	public int getLength() {
-		return length;
-	}
-
-	public File getFile() {
-		return file;
-	}
-
-	public Type getType() {
-		return type;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public EventPriority getPriority() {
-		return priority;
-	}
-
-	public String[] getAliseas() {
-		return aliseas;
-	}
-
-	public String getPermission() {
-		return permission;
-	}
-
-	public List<List<String>> getTabCompleter() {
-		return tabCompleter;
-	}
-
-	public DoubleMultiHashMap<Integer, LineType, String> getLines() {
-		return lines;
-	}
-
-	@Nullable
-	public static DoubleObject<LineType, String> getCommand(String s) {
-
-		s = trim(s);
-
-		DoubleObject<LineType, String> d = new DoubleObject<>();
-
-		if (s.startsWith("(")) {
-
-			int in = s.indexOf(')');
-			/*
-			 * char[] c = s.toCharArray(); for (int i = 0; i < c.length; i++) {
-			 * if (c[i] == ')') { in = i; break; } }
-			 */
-
-			String p = trim(s.substring(1, in));
-
-			String command = trim(s.substring(in + 1));
-
-			if (command.startsWith("/") || command.startsWith("\\")) {
-
-				String cmd = trim(command.substring(1));
-
-				d.put(new LineType(p), cmd);
-
-			} else {
-				return null;
+		for (int line = startLine; line <= lines.size(); line++) {
+			Line ll = lines.get(line);
+			if (ll == null)
+				continue;
+			if (ll instanceof IfLine) {
+				IfLine ifline = (IfLine) ll;
+				if (!checkCommandReturn(ifline.getElseLine())) {
+					return false;
+				}
+			} else if (ll instanceof GotoLine) {
+				line = ((GotoLine) ll).getGotoLine();
+			} else if (ll instanceof ReturnBooleanLine) {
+				return true;
 			}
-		} else if (s.startsWith("/") || s.startsWith("\\")) {
+		}
 
-			try {
-				d.put(new LineType(TypeLine.COMMAND), s);
-			} catch (Exception e) {
-				return null;
-			}
-
-		} else if (s.startsWith("!if ")) {
-
-			return getCommand(s.substring(4));
-
-		} else if (s.startsWith("!loop ")) {
-
-			return getCommand(s.substring(6));
-
-		} else
-			return null;
-
-		return d;
+		return false;
 
 	}
 
-	public static int getLenght(List<String> l) {
+	public void throwError(String error) {
+		continueReading = true;
+		lines.clear();
+		Utils.printRidingError(error, file.getPath(), currentLine);
+	}
 
-		for (int i = l.size() - 1; i >= 0; i--) {
+	public void throwError(String error, int line) {
+		continueReading = true;
+		lines.clear();
+		Utils.printRidingError(error, file.getPath(), line);
+	}
 
-			String s = l.get(i);
+	/**
+	 * Useless, may be slow
+	 * 
+	 * @deprecated
+	 * @param list
+	 *            A list containing a file's lines
+	 * @return Number of !if, !elseif, !else of the script
+	 */
+	@Deprecated
+	public static int getControlFlowLenght(List<String> list) {
 
-			s = trim(s);
+		int count = 0;
 
-			if (!s.isEmpty() && !s.startsWith("#")) {
+		for (int i = list.size() - 1; i >= 0; i--) {
 
-				return i;
+			String s = list.get(i).trim().toLowerCase();
 
+			if (s.startsWith("!if") || s.startsWith("!elseif") || s.startsWith("!else")) {
+				count++;
 			}
 
 		}
 
-		return 0;
+		return count;
 
 	}
 
-	public static String trim(String s) {
-		StringBuilder buil = new StringBuilder(s);
-		while (buil.length() > 0 && buil.charAt(0) == ' ') {
-			buil.deleteCharAt(0);
-		}
+	@Override
+	public String toString() {
+		StringBuilder b = new StringBuilder();
+		b.append("Script Type: ");
+		b.append(type.toString());
+		b.append("\n");
+		for (Entry<Integer, Line> e : lines.entrySet()) {
 
-		if (buil.length() == 0) {
-			return "";
-		}
+			b.append(e.getKey());
+			b.append(" -> ");
+			b.append(e.getValue().toString());
+			b.append(" (");
+			b.append(e.getValue().getClass().getSimpleName());
+			b.append(")");
+			b.append("\n");
 
-		while (buil.length() > 0 && buil.charAt(0) == '\t') {
-			buil.deleteCharAt(0);
 		}
-
-		if (buil.length() == 0) {
-			return "";
-		}
-
-		while (buil.charAt(buil.length() - 1) == ' ') {
-			buil.deleteCharAt(buil.length() - 1);
-		}
-
-		while (buil.charAt(buil.length() - 1) == '\t') {
-			buil.deleteCharAt(buil.length() - 1);
-		}
-		return buil.toString();
-	}
-
-	public static String trim(StringBuilder buil) {
-		while (buil.length() > 0 && buil.charAt(0) == ' ') {
-			buil.deleteCharAt(0);
-		}
-
-		if (buil.length() == 0) {
-			return "";
-		}
-
-		while (buil.length() > 0 && buil.charAt(0) == '\t') {
-			buil.deleteCharAt(0);
-		}
-
-		if (buil.length() == 0) {
-			return "";
-		}
-
-		while (buil.charAt(buil.length() - 1) == ' ') {
-			buil.deleteCharAt(buil.length() - 1);
-		}
-
-		while (buil.charAt(buil.length() - 1) == '\t') {
-			buil.deleteCharAt(buil.length() - 1);
-		}
-		return buil.toString();
+		return b.toString();
 	}
 
 }

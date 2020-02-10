@@ -22,9 +22,10 @@
 
 package com.fren_gor.commandCraftCore.vars;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
+import java.util.Set;
+
+import com.google.common.collect.Sets;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -32,8 +33,8 @@ import lombok.Setter;
 public class BooleanVar extends Variable {
 
 	@Getter
-	private static List<String> list = Collections.unmodifiableList(
-			Arrays.asList("=!", "||", "&&", "^^", "=", "==", "!=", "equals", "toString", "clone", "type"));
+	private static Set<String> list = Collections.unmodifiableSet(
+			Sets.newHashSet("=!", "||", "&&", "^^", "=", "==", "!=", "equals", "toString", "clone", "type"));
 
 	@Setter
 	private boolean value;
@@ -53,7 +54,7 @@ public class BooleanVar extends Variable {
 	}
 
 	@Override
-	public List<String> getMethods() {
+	public Set<String> getMethods() {
 		return list;
 	}
 
@@ -63,8 +64,8 @@ public class BooleanVar extends Variable {
 	}
 
 	@Override
-	public Type getType() {
-		return Type.BOOLEAN;
+	public VarType getType() {
+		return VarType.BOOLEAN;
 	}
 
 	@Override
@@ -85,9 +86,9 @@ public class BooleanVar extends Variable {
 				if (isFinal()) {
 					throw new RuntimeException("Cannot modify a final variable");
 				}
-				if (isConst() && Type.BOOLEAN != parameter.getType())
+				if (isConst() && VarType.BOOLEAN != parameter.getType())
 					throw new IllegalArgumentException("Cannot change " + name + "'s variable type");
-				if (parameter.getType() == Type.BOOLEAN) {
+				if (parameter.getType() == VarType.BOOLEAN) {
 					value = (boolean) parameter.get();
 					return this;
 				}
@@ -105,7 +106,7 @@ public class BooleanVar extends Variable {
 			case "=!":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				if (parameter.getType() == Type.BOOLEAN) {
+				if (parameter.getType() == VarType.BOOLEAN) {
 
 					value = !((boolean) parameter.get());
 
@@ -115,7 +116,7 @@ public class BooleanVar extends Variable {
 			case "||":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				if (parameter.getType() == Type.BOOLEAN)
+				if (parameter.getType() == VarType.BOOLEAN)
 					return new BooleanVar(manager, manager.generateInternalName(),
 							value || ((boolean) parameter.get()));
 				else
@@ -123,7 +124,7 @@ public class BooleanVar extends Variable {
 			case "&&":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				if (parameter.getType() == Type.BOOLEAN)
+				if (parameter.getType() == VarType.BOOLEAN)
 					return new BooleanVar(manager, manager.generateInternalName(),
 							value && ((boolean) parameter.get()));
 				else
@@ -131,7 +132,7 @@ public class BooleanVar extends Variable {
 			case "^^":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				if (parameter.getType() == Type.BOOLEAN)
+				if (parameter.getType() == VarType.BOOLEAN)
 					return new BooleanVar(manager, manager.generateInternalName(),
 							(value) ^ ((boolean) parameter.get()));
 				else
@@ -139,7 +140,7 @@ public class BooleanVar extends Variable {
 			case "!=":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				if (parameter.getType() == Type.BOOLEAN)
+				if (parameter.getType() == VarType.BOOLEAN)
 					return new BooleanVar(manager, manager.generateInternalName(), value != (boolean) parameter.get());
 				else
 					return new BooleanVar(manager, manager.generateInternalName(), true);
@@ -147,7 +148,7 @@ public class BooleanVar extends Variable {
 			case "equals":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
-				if (parameter.getType() == Type.BOOLEAN)
+				if (parameter.getType() == VarType.BOOLEAN)
 					return new BooleanVar(manager, manager.generateInternalName(), value == (boolean) parameter.get());
 				else
 					return new BooleanVar(manager, manager.generateInternalName(), false);
@@ -157,7 +158,7 @@ public class BooleanVar extends Variable {
 				value = !value;
 				return this;
 			default:
-				throw new IllegalArgumentException("Method '" + method + "' is not implemented");
+				throw new IllegalArgumentException("Method '" + method + "' not exists");
 		}
 	}
 

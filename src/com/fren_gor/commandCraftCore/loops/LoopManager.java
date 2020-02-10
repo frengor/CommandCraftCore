@@ -23,30 +23,24 @@
 package com.fren_gor.commandCraftCore.loops;
 
 import java.io.File;
-import java.io.IOException;
 
-import com.fren_gor.commandCraftCore.CommandCraftCore;
 import com.fren_gor.commandCraftCore.Reader;
-import com.fren_gor.commandCraftCore.Reader.Type;
-import com.fren_gor.commandCraftCore.commands.CommandManager;
+import com.fren_gor.commandCraftCore.ScriptType;
 import com.fren_gor.commandCraftCore.utils.saveUtils.DoubleMultiHashMap;
 
 public class LoopManager {
 
 	private DoubleMultiHashMap<String, NewLoop, File> loops;
 
-	private File datafolder;
-
 	public LoopManager() {
 
 		loops = new DoubleMultiHashMap<>();
-		datafolder = new File(CommandCraftCore.getInstance().getDataFolder(), "loops");
 
 	}
 
 	public void registerLoop(NewLoop loop, File f) {
 
-		if (loop.getReader().getType() != Type.LOOP)
+		if (loop.getReader().getType() != ScriptType.LOOP)
 			return;
 
 		loops.put(loop.getName(), loop, f);
@@ -58,12 +52,7 @@ public class LoopManager {
 	}
 
 	public NewLoop buildLoop(File f) {
-		try {
-			return new NewLoop(new Reader(CommandManager.readFile(f), f));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return null;
+		return new NewLoop(new Reader(f));
 	}
 
 }

@@ -148,4 +148,29 @@ public final class SavingObject<T> implements Serializable {
 		return true;
 	}
 
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((o == null) ? 0 : o.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (!(obj instanceof SavingObject))
+			return false;
+		SavingObject<?> other = (SavingObject<?>) obj;
+		if (o == null) {
+			if (other.o != null)
+				return false;
+		} else if (!o.equals(other.o))
+			return false;
+		return true;
+	}
+
 }

@@ -33,10 +33,11 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.EventExecutor;
 
 import com.fren_gor.commandCraftCore.CommandCraftCore;
-import com.fren_gor.commandCraftCore.Executor;
 import com.fren_gor.commandCraftCore.Reader;
-import com.fren_gor.commandCraftCore.Reader.Type;
+import com.fren_gor.commandCraftCore.ScriptType;
+import com.fren_gor.commandCraftCore.executor.Executor;
 import com.fren_gor.commandCraftCore.utils.saveUtils.TripleConsumer;
+import com.fren_gor.commandCraftCore.vars.BooleanVar;
 import com.fren_gor.commandCraftCore.vars.VariableManager;
 
 public class NewEvent implements EventExecutor {
@@ -58,12 +59,12 @@ public class NewEvent implements EventExecutor {
 
 	public NewEvent(Class<? extends Event> clazz, Reader r) {
 
-		if (r.getType() != Type.EVENT)
+		if (r.getType() != ScriptType.EVENT)
 			throw new IllegalArgumentException("Invalid type :" + r.getType() + ". Only EVENT is admitted!");
 
 		this.clazz = clazz;
 		this.r = r;
-		this.name = r.getName();
+		this.name = r.getScriptName();
 
 	}
 
@@ -78,9 +79,10 @@ public class NewEvent implements EventExecutor {
 	@Override
 	public void execute(Listener l, Event e) throws EventException {
 
-		Executor ex = new Executor();
+		Executor ex = new Executor(r);
 
-		new EventCancelledVar(ex.getManager(), "$cancelled", e);
+		new BooleanVar(ex.getManager(), "$cancelled",
+				e instanceof Cancellable ? ((Cancellable) e).isCancelled() : false);
 
 		if (CommandCraftCore.getEventManager().eventVars.containsKey(clazz)
 				&& !CommandCraftCore.getEventManager().eventVars.get(clazz).isEmpty()) {
@@ -89,7 +91,7 @@ public class NewEvent implements EventExecutor {
 				c.accept(e, ex.getManager());
 			}
 		}
-		boolean canc = ex.execute(r);
+		boolean canc = ex.execute();
 		if (canc && e instanceof Cancellable)
 			((Cancellable) e).setCancelled(true);
 

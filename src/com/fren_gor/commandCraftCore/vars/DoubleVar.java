@@ -22,20 +22,20 @@
 
 package com.fren_gor.commandCraftCore.vars;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
+import java.util.Set;
 
 import com.fren_gor.commandCraftCore.utils.saveUtils.DoubleObject;
+import com.google.common.collect.Sets;
 
 import lombok.Getter;
 
 public class DoubleVar extends Variable {
 
 	@Getter
-	private static List<String> list = Collections
-			.unmodifiableList(Arrays.asList("=", "+", "-", "*", "/", "%", "^", "clone", "toString", "==", "equals",
-					"toInt", "!=", ">", "<", ">=", "<=", "\\/¯", "v", "floor", "ceil", "round", "type"));
+	private static Set<String> list = Collections
+			.unmodifiableSet(Sets.newHashSet("=", "+", "-", "*", "/", "%", "^", "clone", "toString", "==", "equals",
+					"toInt", "!=", ">", "<", ">=", "<=", "√", "v", "floor", "ceil", "round", "type"));
 
 	@Getter
 	private double value;
@@ -51,7 +51,7 @@ public class DoubleVar extends Variable {
 	}
 
 	@Override
-	public List<String> getMethods() {
+	public Set<String> getMethods() {
 		return list;
 	}
 
@@ -61,8 +61,8 @@ public class DoubleVar extends Variable {
 	}
 
 	@Override
-	public Type getType() {
-		return Type.DOUBLE;
+	public VarType getType() {
+		return VarType.DOUBLE;
 	}
 
 	@Override
@@ -80,9 +80,8 @@ public class DoubleVar extends Variable {
 					value = Math.round(value);
 					return this;
 				}
-				if (parameter.getType() != Type.INT) {
-					throw new IllegalArgumentException(
-							parameter.getType().toString().toLowerCase() + " is not an integer variable");
+				if (parameter.getType() != VarType.INT) {
+					throw new IllegalArgumentException(parameter.getName() + " is not an integer variable");
 				}
 
 				long m = (long) Math.pow(10, (int) parameter.get());
@@ -95,9 +94,8 @@ public class DoubleVar extends Variable {
 					value = Math.floor(value);
 					return this;
 				}
-				if (parameter.getType() != Type.INT) {
-					throw new IllegalArgumentException(
-							parameter.getType().toString().toLowerCase() + " is not an integer variable");
+				if (parameter.getType() != VarType.INT) {
+					throw new IllegalArgumentException(parameter.getName() + " is not an integer variable");
 				}
 
 				long m = (long) Math.pow(10, (int) parameter.get());
@@ -110,9 +108,8 @@ public class DoubleVar extends Variable {
 					value = Math.ceil(value);
 					return this;
 				}
-				if (parameter.getType() != Type.INT) {
-					throw new IllegalArgumentException(
-							parameter.getType().toString().toLowerCase() + " is not an integer variable");
+				if (parameter.getType() != VarType.INT) {
+					throw new IllegalArgumentException(parameter.getName() + " is not an integer variable");
 				}
 
 				long m = (long) Math.pow(10, (int) parameter.get());
@@ -187,9 +184,9 @@ public class DoubleVar extends Variable {
 				if (isFinal()) {
 					throw new RuntimeException("Cannot modify a final variable");
 				}
-				if (isConst() && Type.DOUBLE != parameter.getType())
+				if (isConst() && VarType.DOUBLE != parameter.getType())
 					throw new IllegalArgumentException("Cannot change " + name + "'s variable type");
-				if (parameter.getType() == Type.DOUBLE) {
+				if (parameter.getType() == VarType.DOUBLE) {
 					value = d.getKey();
 					return this;
 				}
@@ -220,8 +217,8 @@ public class DoubleVar extends Variable {
 				}
 				// root
 			case "v":
-				// Alt + 0175
-			case "\\/¯":
+				// \u221A
+			case "√":
 				if (parameter == null)
 					throw new IllegalArgumentException("The method ' " + method + " ' must have a parameter");
 				if (d.getValue()) {
@@ -282,17 +279,17 @@ public class DoubleVar extends Variable {
 					throw new IllegalArgumentException("The method ' " + method + " ' cannot have any parameters");
 				return new StringVar(manager, manager.generateInternalName(), toString());
 			default:
-				throw new IllegalArgumentException("Method '" + method + "' is not implemented");
+				throw new IllegalArgumentException("Method '" + method + "' not exists");
 		}
 
 	}
 
 	private static DoubleObject<Double, Boolean> transorm(Variable v) {
 
-		switch (v.getType()) {
-			case INT:
+		switch (v.getType().toString()) {
+			case "INT":
 				return new DoubleObject<>((double) (int) v.get(), true);
-			case DOUBLE:
+			case "DOUBLE":
 				return new DoubleObject<>((double) v.get(), true);
 			default:
 				return new DoubleObject<>(null, false);

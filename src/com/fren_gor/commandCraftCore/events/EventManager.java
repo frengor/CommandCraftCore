@@ -41,16 +41,17 @@ import org.reflections.Reflections;
 
 import com.fren_gor.commandCraftCore.CommandCraftCore;
 import com.fren_gor.commandCraftCore.Reader;
+import com.fren_gor.commandCraftCore.ScriptType;
 import com.fren_gor.commandCraftCore.utils.saveUtils.DoubleMultiHashMap;
 import com.fren_gor.commandCraftCore.utils.saveUtils.TripleConsumer;
 import com.fren_gor.commandCraftCore.utils.saveUtils.TripleMultiHashMap;
-import com.fren_gor.commandCraftCore.vars.Type;
+import com.fren_gor.commandCraftCore.vars.VarType;
 import com.fren_gor.commandCraftCore.vars.VariableManager;
 
 public class EventManager {
 
 	private Map<String, Map<File, NewEvent>> events;
-	Map<Class<? extends Event>, TripleMultiHashMap<String, Type, String, BiConsumer<Event, VariableManager>>> eventVars = new HashMap<>();
+	Map<Class<? extends Event>, TripleMultiHashMap<String, VarType, String, BiConsumer<Event, VariableManager>>> eventVars = new HashMap<>();
 	DoubleMultiHashMap<Class<? extends Event>, List<String>, List<TripleConsumer<Event, VariableManager, Boolean>>> eventTasks = new DoubleMultiHashMap<>();
 
 	public Map<String, Map<File, NewEvent>> getEvents() {
@@ -65,7 +66,7 @@ public class EventManager {
 		return eventTasks;
 	}
 
-	public Map<Class<? extends Event>, TripleMultiHashMap<String, Type, String, BiConsumer<Event, VariableManager>>> getEventVars() {
+	public Map<Class<? extends Event>, TripleMultiHashMap<String, VarType, String, BiConsumer<Event, VariableManager>>> getEventVars() {
 		return eventVars;
 	}
 
@@ -80,7 +81,7 @@ public class EventManager {
 	public void registerEvent(NewEvent event, File file) {
 
 		Bukkit.getPluginManager().registerEvent(event.getEventClass(), event.getListener(),
-				event.getReader().getPriority(), event, CommandCraftCore.getInstance());
+				event.getReader().getEventPriority(), event, CommandCraftCore.getInstance());
 
 		if (!events.containsKey(event.getName()))
 			events.put(event.getName(), new HashMap<>());
@@ -90,13 +91,13 @@ public class EventManager {
 	}
 
 	public NewEvent buildEvent(File f) throws Exception {
-		return buildEvent(new Reader(readFile(f), f), f);
+		return buildEvent(new Reader(f), f);
 	}
 
 	@SuppressWarnings("unchecked")
 	public NewEvent buildEvent(Reader r, File f) throws Exception {
 
-		if (r.getType() != com.fren_gor.commandCraftCore.Reader.Type.EVENT) {
+		if (r.getType() != ScriptType.EVENT) {
 			Bukkit.getConsoleSender().sendMessage("[CommandCraftCore] §cFile " + f.getPath() + " is not an event file");
 			throw new IllegalArgumentException("File " + f.getPath() + " is not an event file");
 		}
@@ -148,22 +149,22 @@ public class EventManager {
 			eventVars.put(event, new TripleMultiHashMap<>());
 	}
 
-	public void registerVariable(Class<? extends Event> event, String varName, Type type,
+	public void registerVariable(Class<? extends Event> event, String varName, VarType type,
 			BiConsumer<Event, VariableManager> value) {
 		registerVariable(event, varName, type, "", value, false);
 	}
 
-	public void registerVariable(Class<? extends Event> event, String varName, Type type, String varDescription,
+	public void registerVariable(Class<? extends Event> event, String varName, VarType type, String varDescription,
 			BiConsumer<Event, VariableManager> value) {
 		registerVariable(event, varName, type, varDescription, value, false);
 	}
 
-	public void registerVariable(Class<? extends Event> event, String varName, Type type,
+	public void registerVariable(Class<? extends Event> event, String varName, VarType type,
 			BiConsumer<Event, VariableManager> value, boolean replace) {
 		registerVariable(event, varName, type, "", value, replace);
 	}
 
-	public void registerVariable(Class<? extends Event> event, String varName, Type type, String varDescription,
+	public void registerVariable(Class<? extends Event> event, String varName, VarType type, String varDescription,
 			BiConsumer<Event, VariableManager> value, boolean replace) {
 
 		if (!varName.startsWith("$"))
@@ -225,20 +226,20 @@ public class EventManager {
 		return l;
 	}
 
-	public static Type getType(Object value) {
-		Type t;
+	public static VarType getType(Object value) {
+		VarType t;
 		if (value == null) {
-			t = Type.NULL;
+			t = VarType.NULL;
 		} else if (value instanceof Integer) {
-			t = Type.INT;
+			t = VarType.INT;
 		} else if (value instanceof Double) {
-			t = Type.DOUBLE;
+			t = VarType.DOUBLE;
 		} else if (value instanceof List) {
-			t = Type.LIST;
+			t = VarType.LIST;
 		} else if (value instanceof String) {
-			t = Type.STRING;
+			t = VarType.STRING;
 		} else if (value instanceof Boolean) {
-			t = Type.BOOLEAN;
+			t = VarType.BOOLEAN;
 		} else {
 			throw new IllegalArgumentException("Illegal value type " + value.getClass().getSimpleName());
 		}

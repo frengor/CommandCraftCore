@@ -1,11 +1,9 @@
 main: com.fren_gor.commandCraftCore.CommandCraftCore
 name: CommandCraftCore
-description: Create cmcs scripts to run sequences of commands on spigot servers! 
-version: alpha-1.0
+description: Create cmcs scripts to run sequences of commands on spigot servers!
+version: alpha-2.0
 author: fren_gor
-website: https://github.com/frengordev/CommandCraftCore
-
-api-version: 1.13
+website: www.frengor.com
 
 commands:
   createscript:
@@ -19,14 +17,56 @@ commands:
     permission: commandCraftCore.worldtp
   commandcraftcore:
     description: The main command of the plugin
-    aliases: [ccc]
+    aliases: [ccc, cmc]
     permission: commandCraftCore.mainCommand
   varhelp:
-    description: The main command of the plugin
+    description: /varhelp
     permission: commandCraftCore.varhelp
-    
+  testforpermissions:
+    description: /testforpermissions
+    permission: commandCraftCore.testforpermissions
+  inventories:
+    description: The main command of the plugin
+    aliases: [cccinvs, cmcinvs, invs]
+    permission: commandCraftCore.invs
+  advancedclone:
+    description: Clone an area without update physic
+    permission: commandCraftCore.advancedclone
+  advancedtestforblocks:
+    description: Test an area of blocks
+    permission: commandCraftCore.advancedtestforblocks
+  pluginmessagingchannel:
+    description: Test an area of blocks
+    permission: commandCraftCore.pluginmsgchannel
+  registerpluginmessagingchannel:
+    permission: commandCraftCore.pluginmsgchannel
+  advancedsetblock:
+    permission: commandCraftCore.advancedsetblock
 
 permissions:
+  commandCraftCore.*:
+    description: Grant all the plugin's permissions
+    default: op
+    children:
+      commandCraftCore.advancedclone: true
+      commandCraftCore.varhelp: true
+      commandCraftCore.mainCommand: true
+      commandCraftCore.createScript: true
+      commandCraftCore.worldtp: true
+      commandCraftCore.invs: true
+      commandCraftCore.advancedtestforblocks: true
+      commandCraftCore.pluginmsgchannel: true
+      commandCraftCore.testforpermissions: true
+      commandCraftCore.advancedsetblock: true
+  commandCraftCore.testforpermissions:
+    description: use the command /testforpermissions
+    default: op
+  commandCraftCore.advancedtestforblocks:
+    description: use the command /advancedtestforblocks
+    default: op
+  commandCraftCore.advancedclone:
+    description: use the command /advancedclone
+    default: op
   commandCraftCore.varhelp:
     description: use the command /varhelp
     default: op
@@ -38,4 +78,13 @@ permissions:
     default: op
   commandCraftCore.worldtp:
     description: use the command /worldtp
-    default: true
+    default: op
+  commandCraftCore.invs:
+    description: use the command /inventories
+    default: op
+  commandCraftCore.pluginmsgchannel:
+    description: use the command /pluginmessagingchannel
+    default: op
+  commandCraftCore.advancedsetblock:
+    description: use the command /advancedsetblock
+    default: op

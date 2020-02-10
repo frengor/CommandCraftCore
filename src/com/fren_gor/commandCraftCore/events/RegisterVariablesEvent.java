@@ -29,9 +29,9 @@ import org.bukkit.event.HandlerList;
 
 import com.fren_gor.commandCraftCore.CommandCraftCore;
 import com.fren_gor.commandCraftCore.utils.saveUtils.TripleConsumer;
-import com.fren_gor.commandCraftCore.vars.StaticMethod;
-import com.fren_gor.commandCraftCore.vars.StaticMethods;
-import com.fren_gor.commandCraftCore.vars.Type;
+import com.fren_gor.commandCraftCore.vars.StaticAction;
+import com.fren_gor.commandCraftCore.vars.StaticActions;
+import com.fren_gor.commandCraftCore.vars.VarType;
 import com.fren_gor.commandCraftCore.vars.Variable;
 import com.fren_gor.commandCraftCore.vars.VariableManager;
 
@@ -60,7 +60,7 @@ public final class RegisterVariablesEvent extends Event {
 	 * @param value
 	 *            The Variable
 	 */
-	public void registerVariable(Class<? extends Event> event, String varName, Type type,
+	public void registerVariable(Class<? extends Event> event, String varName, VarType type,
 			BiConsumer<Event, VariableManager> value) {
 		CommandCraftCore.getEventManager().registerVariable(event, varName, type, value);
 	}
@@ -79,7 +79,7 @@ public final class RegisterVariablesEvent extends Event {
 	 * @param value
 	 *            The Variable
 	 */
-	public void registerVariable(Class<? extends Event> event, String varName, Type type, String varDescription,
+	public void registerVariable(Class<? extends Event> event, String varName, VarType type, String varDescription,
 			BiConsumer<Event, VariableManager> value) {
 		CommandCraftCore.getEventManager().registerVariable(event, varName, type, varDescription, value, false);
 	}
@@ -99,7 +99,7 @@ public final class RegisterVariablesEvent extends Event {
 	 *            Indicates whether to replace a variable if one already exists
 	 *            with the same name
 	 */
-	public void registerVariable(Class<? extends Event> event, String varName, Type type,
+	public void registerVariable(Class<? extends Event> event, String varName, VarType type,
 			BiConsumer<Event, VariableManager> value, boolean replace) {
 		CommandCraftCore.getEventManager().registerVariable(event, varName, type, value, replace);
 	}
@@ -121,21 +121,21 @@ public final class RegisterVariablesEvent extends Event {
 	 *            Indicates whether to replace a variable if one already exists
 	 *            with the same name
 	 */
-	public void registerVariable(Class<? extends Event> event, String varName, Type type, String varDescription,
+	public void registerVariable(Class<? extends Event> event, String varName, VarType type, String varDescription,
 			BiConsumer<Event, VariableManager> value, boolean replace) {
 		CommandCraftCore.getEventManager().registerVariable(event, varName, type, varDescription, value, replace);
 	}
 
 	/**
-	 * Register a {@link StaticMethod} like "@Bukkit#getPlayer"
+	 * Register a {@link StaticAction} like "@Bukkit#getPlayer"
 	 * 
 	 * @param key
 	 *            The Main name (in the example: Bukkit)
 	 * @param value
-	 *            The {@link StaticMethod}
+	 *            The {@link StaticAction}
 	 */
-	public void registerStaticVariable(String key, StaticMethod value) {
-		StaticMethods.register(key, value);
+	public void registerStaticVariable(String key, StaticAction value) {
+		StaticActions.register(key, value);
 	}
 
 	/**

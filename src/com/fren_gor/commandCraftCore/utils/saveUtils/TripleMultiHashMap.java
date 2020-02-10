@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 public class TripleMultiHashMap<K, V1, V2, V3> implements Serializable {
@@ -80,7 +81,7 @@ public class TripleMultiHashMap<K, V1, V2, V3> implements Serializable {
 		return map.size();
 	}
 
-	public HashMap<K, TripleObject<V1, V2, V3>> getHashMap() {
+	public Map<K, TripleObject<V1, V2, V3>> getHashMap() {
 		return map;
 	}
 
@@ -280,7 +281,7 @@ public class TripleMultiHashMap<K, V1, V2, V3> implements Serializable {
 
 		}
 
-		this.map = o.getHashMap();
+		this.map = (HashMap<K, TripleObject<V1, V2, V3>>) o.getHashMap();
 
 	}
 
@@ -300,6 +301,31 @@ public class TripleMultiHashMap<K, V1, V2, V3> implements Serializable {
 		b.append("}");
 		return b.toString();
 
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((map == null) ? 0 : map.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (!(obj instanceof TripleMultiHashMap))
+			return false;
+		TripleMultiHashMap<?, ?, ?, ?> other = (TripleMultiHashMap<?, ?, ?, ?>) obj;
+		if (map == null) {
+			if (other.map != null)
+				return false;
+		} else if (!map.equals(other.map))
+			return false;
+		return true;
 	}
 
 }

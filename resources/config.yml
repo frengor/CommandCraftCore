@@ -15,4 +15,10 @@
 
 debug-mode: false
 
-view-execute-time: true
+view-reading-time: false
+view-executing-time: false
+ignore-loops: true
+
+create-folders: false
+
+disabled-scripts: []

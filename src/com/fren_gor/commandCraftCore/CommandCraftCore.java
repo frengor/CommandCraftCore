@@ -29,9 +29,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -43,20 +45,28 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import com.fren_gor.commandCraftCore.Reader.Type;
 import com.fren_gor.commandCraftCore.commands.CommandManager;
 import com.fren_gor.commandCraftCore.commands.NewCommand;
-import com.fren_gor.commandCraftCore.commands.commands.CCC;
+import com.fren_gor.commandCraftCore.commands.commands.AdvancedClone;
+import com.fren_gor.commandCraftCore.commands.commands.AdvancedSetBlock;
+import com.fren_gor.commandCraftCore.commands.commands.AdvancedTestforblocks;
+import com.fren_gor.commandCraftCore.commands.commands.Cmc;
+import com.fren_gor.commandCraftCore.commands.commands.PluginMessagingChannel;
+import com.fren_gor.commandCraftCore.commands.commands.RegisterPluginMessagingChannel;
+import com.fren_gor.commandCraftCore.commands.commands.TestForPermissions;
 import com.fren_gor.commandCraftCore.commands.commands.VarHelp;
 import com.fren_gor.commandCraftCore.commands.commands.WorldTp;
 import com.fren_gor.commandCraftCore.events.EventManager;
 import com.fren_gor.commandCraftCore.events.NewEvent;
+import com.fren_gor.commandCraftCore.events.RegisterVarTypesEvent;
 import com.fren_gor.commandCraftCore.events.RegisterVariablesEvent;
 import com.fren_gor.commandCraftCore.events.events.OnDisableEvent;
 import com.fren_gor.commandCraftCore.events.events.OnEnableEvent;
 import com.fren_gor.commandCraftCore.loops.LoopManager;
 import com.fren_gor.commandCraftCore.loops.NewLoop;
-import com.fren_gor.commandCraftCore.vars.StaticMethods;
+import com.fren_gor.commandCraftCore.utils.saveUtils.DoubleObject;
+import com.fren_gor.commandCraftCore.utils.saveUtils.SavingObject;
+import com.fren_gor.commandCraftCore.vars.StaticActions;
 
 import lombok.Getter;
 
@@ -68,6 +78,11 @@ public class CommandCraftCore extends JavaPlugin implements Listener {
 	private static LoopManager loopManager;
 	private int reloadCount;
 	private static Object craftServer;
+	private static File SAVES_FOLDER;
+
+	public static File getSavesFolder() {
+		return SAVES_FOLDER;
+	}
 
 	static {
 		craftServer = ReflectionUtil.cast(Bukkit.getServer(), ReflectionUtil.getCBClass("CraftServer"));
@@ -90,6 +105,7 @@ public class CommandCraftCore extends JavaPlugin implements Listener {
 	@Override
 	public void onEnable() {
 		instance = this;
+
 		commandMap = (CommandMap) ReflectionUtil.getField(Bukkit.getServer(), "commandMap");
 		knownCommands = ((Map<String, Command>) ReflectionUtil.getField(commandMap, "knownCommands"));
 		commandManager = new CommandManager();
@@ -103,6 +119,18 @@ public class CommandCraftCore extends JavaPlugin implements Listener {
 		if (!getDataFolder().exists()) {
 			getDataFolder().mkdirs();
 		}
+
+		SAVES_FOLDER = new File(getDataFolder(), "saves");
+
+		if (SAVES_FOLDER.exists()) {
+
+			SavingObject<Map<String, String>> s = new SavingObject<>(new File(SAVES_FOLDER, "savedVars"));
+
+			StaticActions.writtenVariables = s.getObject();
+
+		} else
+			SAVES_FOLDER.mkdirs();
+
 		if (!new File(getDataFolder(), "config.yml").exists()) {
 			getConfig().options().copyDefaults(true);
 			try {
@@ -117,8 +145,19 @@ public class CommandCraftCore extends JavaPlugin implements Listener {
 			e1.printStackTrace();
 		}
 
-		ConfigManager.setDebugMode(getConfig().getBoolean("debug-mode"));
-		ConfigManager.setViewExecuteTime(getConfig().getBoolean("view-execute-time"));
+		ConfigManager.debugMode = getConfig().getBoolean("debug-mode");
+		ConfigManager.viewReadingTime = getConfig().getBoolean("view-reading-time");
+		ConfigManager.viewExecutingTime = getConfig().getBoolean("view-executing-time");
+		ConfigManager.ignoreLops = instance.getConfig().getBoolean("ignore-loops");
+		ConfigManager.createFolders = instance.getConfig().getBoolean("create-folders");
+		ConfigManager.setDisabledScripts(getConfig().getStringList("disabled-scripts"));
+
+		if (ConfigManager.getDisabledScripts().size() > 0) {
+			System.out.println("Disabled Scripts:");
+			for (String s : ConfigManager.getDisabledScripts()) {
+				System.out.println(s);
+			}
+		}
 
 		if (!new File(getDataFolder(), "commands").exists()) {
 			new File(getDataFolder(), "commands").mkdir();
@@ -134,12 +173,15 @@ public class CommandCraftCore extends JavaPlugin implements Listener {
 			loadDir(f);
 		}
 
-		new EventVarsRegisterListner();
+		new EventVarsRegisterListener();
 
 		new BukkitRunnable() {
 
 			@Override
 			public void run() {
+
+				Bukkit.getPluginManager().callEvent(new RegisterVarTypesEvent());
+
 				Bukkit.getPluginManager().callEvent(new RegisterVariablesEvent());
 
 				Bukkit.getPluginManager().callEvent(new OnEnableEvent());
@@ -152,8 +194,8 @@ public class CommandCraftCore extends JavaPlugin implements Listener {
 
 		// Main command of the plugin
 		// Moved to com.fren_gor.commandCraftCore.commands.commands.CCC
-		Bukkit.getPluginCommand("commandCraftCore").setExecutor(new CCC());
-		Bukkit.getPluginCommand("commandCraftCore").setTabCompleter(new CCC());
+		Bukkit.getPluginCommand("commandCraftCore").setExecutor(new Cmc());
+		Bukkit.getPluginCommand("commandCraftCore").setTabCompleter(new Cmc());
 		/*
 		 * NewCommand n = new NewCommand("commandCraftCore",
 		 * "commandCraftCore.mainCommand", true, "ccc") {
@@ -204,22 +246,32 @@ public class CommandCraftCore extends JavaPlugin implements Listener {
 
 		Bukkit.getPluginCommand("varhelp").setExecutor(new VarHelp());
 		Bukkit.getPluginCommand("varhelp").setTabCompleter(new VarHelp());
+		Bukkit.getPluginCommand("testforpermissions").setExecutor(new TestForPermissions());
+		Bukkit.getPluginCommand("testforpermissions").setTabCompleter(new TestForPermissions());
 		Bukkit.getPluginCommand("createscript").setExecutor(new CreateScript());
 		Bukkit.getPluginCommand("createscript").setTabCompleter(new CreateScript());
 		Bukkit.getPluginCommand("updatescript").setExecutor(new CreateScript.ScriptUpdater());
 		Bukkit.getPluginCommand("updatescript").setTabCompleter(new CreateScript.ScriptUpdater());
+		// Bukkit.getPluginCommand("varhelp").setExecutor(new Inventories());
+		Bukkit.getPluginCommand("advancedclone").setExecutor(new AdvancedClone());
+		Bukkit.getPluginCommand("advancedsetblock").setExecutor(new AdvancedSetBlock());
+		Bukkit.getPluginCommand("advancedtestforblocks").setExecutor(new AdvancedTestforblocks());
+		Bukkit.getPluginCommand("pluginmessagingchannel").setTabCompleter(new PluginMessagingChannel());
+		Bukkit.getPluginCommand("pluginmessagingchannel").setExecutor(new PluginMessagingChannel());
+		Bukkit.getPluginCommand("registerpluginmessagingchannel").setTabCompleter(new RegisterPluginMessagingChannel());
+		Bukkit.getPluginCommand("registerpluginmessagingchannel").setExecutor(new RegisterPluginMessagingChannel());
 
 	}
 
 	private static void loadDir(File f) {
 		try {
 			if (!f.isDirectory()) {
-				if (!f.getName().endsWith(".cmc"))
+				if (!f.getName().endsWith(".cmc") || ConfigManager.getDisabledScripts().contains(f.getName()))
 					return;
-				Reader r = new Reader(readFile(f), f);
-				if (r.getType() == Type.COMMAND)
+				Reader r = new Reader(f);
+				if (r.getType() == ScriptType.COMMAND)
 					commandManager.registerCommand(commandManager.buildCommand(r, f), f);
-				else if (r.getType() == Type.EVENT)
+				else if (r.getType() == ScriptType.EVENT)
 					eventManager.registerEvent(eventManager.buildEvent(r, f), f);
 				else
 					loopManager.registerLoop(new NewLoop(r), f);
@@ -261,7 +313,7 @@ public class CommandCraftCore extends JavaPlugin implements Listener {
 		if (ev != null) {
 
 			for (NewEvent e : ev.values()) {
-				map.get(e.getReader().getPriority()).add(e);
+				map.get(e.getReader().getEventPriority()).add(e);
 			}
 
 			// reloadcount
@@ -311,12 +363,80 @@ public class CommandCraftCore extends JavaPlugin implements Listener {
 
 		eventManager.getEvents().clear();
 
-		StaticMethods.savedVariables.clear();
+		StaticActions.savedVariables.clear();
+
+		SavingObject<Map<String, String>> s = new SavingObject<>(StaticActions.writtenVariables);
+
+		s.save(new File(SAVES_FOLDER, "savedVars"));
+
 		commandManager.getCommands().clear();
 		eventManager.getEvents().clear();
 
 		eventManager.getEventVars().clear();
 
+	}
+
+	public static boolean reloadScript(File script) {
+
+		if (!script.exists() || script.isDirectory() || !script.getName().endsWith(".cmc"))
+			return false;
+
+		boolean b = true;
+
+		if (commandManager.getCommands().containsValue2(script)) {
+
+			Iterator<DoubleObject<NewCommand, File>> it = commandManager.getCommands().getValuesIterator();
+			NewCommand e1 = null;
+			while (it.hasNext()) {
+				Entry<NewCommand, File> e = it.next();
+
+				if (e.getValue().equals(script)) {
+					e1 = e.getKey();
+					b = false;
+				}
+
+			}
+			if (e1 != null)
+				e1.unregister();
+		} else if (loopManager.getLoops().containsValue2(script)) {
+
+			Iterator<DoubleObject<NewLoop, File>> it = loopManager.getLoops().getValuesIterator();
+			NewLoop e1 = null;
+			while (it.hasNext()) {
+				Entry<NewLoop, File> e = it.next();
+
+				if (e.getValue().equals(script)) {
+					e1 = e.getKey();
+					b = false;
+					break;
+				}
+
+			}
+			if (e1 != null)
+				e1.unregister();
+		} else {
+			for (Map<File, NewEvent> map : eventManager.getEvents().values()) {
+				Iterator<Entry<File, NewEvent>> it = map.entrySet().iterator();
+				NewEvent e1 = null;
+				while (it.hasNext()) {
+					Entry<File, NewEvent> e = it.next();
+
+					if (e.getKey().equals(script)) {
+						e1 = e.getValue();
+						b = false;
+					}
+				}
+				if (e1 != null)
+					e1.unregister();
+			}
+		}
+
+		if (b) {
+			return false;
+		}
+
+		loadDir(script);
+		return true;
 	}
 
 	public static void reload() {
@@ -339,7 +459,7 @@ public class CommandCraftCore extends JavaPlugin implements Listener {
 
 		eventManager.getEvents().clear();
 
-		StaticMethods.savedVariables.clear();
+		StaticActions.savedVariables.clear();
 		commandManager.getCommands().clear();
 		eventManager.getEvents().clear();
 
@@ -363,8 +483,19 @@ public class CommandCraftCore extends JavaPlugin implements Listener {
 			e1.printStackTrace();
 		}
 
-		ConfigManager.setDebugMode(instance.getConfig().getBoolean("debug-mode"));
-		ConfigManager.setViewExecuteTime(instance.getConfig().getBoolean("view-execute-time"));
+		ConfigManager.debugMode = instance.getConfig().getBoolean("debug-mode");
+		ConfigManager.viewReadingTime = instance.getConfig().getBoolean("view-reading-time");
+		ConfigManager.viewExecutingTime = instance.getConfig().getBoolean("view-executing-time");
+		ConfigManager.ignoreLops = instance.getConfig().getBoolean("ignore-loops");
+		ConfigManager.createFolders = instance.getConfig().getBoolean("create-folders");
+		ConfigManager.setDisabledScripts(instance.getConfig().getStringList("disabled-scripts"));
+
+		if (ConfigManager.getDisabledScripts().size() > 0) {
+			System.out.println("Disabled Scripts:");
+			for (String s : ConfigManager.getDisabledScripts()) {
+				System.out.println(s);
+			}
+		}
 
 		if (!new File(instance.getDataFolder(), "commands").exists()) {
 			new File(instance.getDataFolder(), "commands").mkdir();

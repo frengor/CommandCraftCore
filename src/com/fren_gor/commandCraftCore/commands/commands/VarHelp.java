@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.StringJoiner;
 
 import org.bukkit.command.Command;
@@ -35,16 +36,16 @@ import org.bukkit.command.TabCompleter;
 
 import com.fren_gor.commandCraftCore.utils.Utils;
 import com.fren_gor.commandCraftCore.utils.saveUtils.DoubleObject;
-import com.fren_gor.commandCraftCore.vars.Type;
+import com.fren_gor.commandCraftCore.vars.VarType;
 
 public class VarHelp implements CommandExecutor, TabCompleter {
 
-	private final static List<String> list = new ArrayList<>(Type.values().length);
-	private final static Map<String, DoubleObject<List<String>, String>> map = new HashMap<>();
+	private final static List<String> list = new ArrayList<>(VarType.getRegisteredTypes().size());
+	private final static Map<String, DoubleObject<Set<String>, String>> map = new HashMap<>();
 	private final static String types;
 
 	static {
-		for (Type t : Type.values()) {
+		for (VarType t : VarType.getRegisteredTypes()) {
 			list.add(t.toString());
 			StringJoiner s = new StringJoiner("§f, §e");
 			for (String ss : t.getMethods()) {
@@ -71,7 +72,7 @@ public class VarHelp implements CommandExecutor, TabCompleter {
 			return true;
 		}
 
-		DoubleObject<List<String>, String> d = map.get(args[0].toUpperCase());
+		DoubleObject<Set<String>, String> d = map.get(args[0].toUpperCase());
 
 		if (d == null) {
 			sender.sendMessage("Invalid variable type " + args[0]
@@ -88,7 +89,7 @@ public class VarHelp implements CommandExecutor, TabCompleter {
 			return Utils.filterTabCompleteOptions(list, args);
 		}
 		if (args.length == 2) {
-			DoubleObject<List<String>, String> l = map.get(args[0].toUpperCase());
+			DoubleObject<Set<String>, String> l = map.get(args[0].toUpperCase());
 			if (l == null)
 				return new ArrayList<>();
 			return Utils.filterTabCompleteOptions(l.getKey(), args);

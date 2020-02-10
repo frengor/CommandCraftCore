@@ -23,14 +23,23 @@
 package com.fren_gor.commandCraftCore.utils;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Random;
+
+import org.bukkit.Bukkit;
+
+import com.fren_gor.commandCraftCore.Reader;
+import com.fren_gor.commandCraftCore.exceptions.ReaderException;
 
 import lombok.experimental.UtilityClass;
 
 @UtilityClass
 public class Utils {
 
-	public static List<String> filterTabCompleteOptions(List<String> options, String[] args) {
+	private static Random rand = new Random();
+
+	public static List<String> filterTabCompleteOptions(Collection<String> options, String... args) {
 		String lastArg = "";
 		if (args.length > 0) {
 			lastArg = args[(args.length - 1)].toLowerCase();
@@ -42,6 +51,102 @@ public class Utils {
 			}
 		}
 		return Options;
+	}
+
+	/**
+	 * Check if a line starts with a {@link String} and if it is followed by any
+	 * character
+	 * 
+	 * @param line
+	 *            Complete line
+	 * @param starting
+	 *            Stirng to compare
+	 * @return If the string matching was successful
+	 */
+	public static boolean check(String line, String starting) {
+
+		if (line.length() <= starting.length())
+			return false;
+
+		char[] sc = starting.toCharArray();
+		char[] oc = line.toCharArray();
+
+		int l = starting.length();
+
+		for (int i = 0; i < line.length(); i++) {
+			if (i < l) {
+				if (sc[i] != oc[i]) {
+					return false;
+				}
+			} else {
+				if (oc[i] != ' ' && oc[i] != '\t') {
+					return true;
+				}
+			}
+		}
+
+		return false;
+
+	}
+
+	public static void printRidingError(String report, String path, int line) {
+
+		Bukkit.getConsoleSender()
+				.sendMessage("[CommandCraftCore] §cError: " + report + "§c! §7File: " + path + " §6Line: §e" + line);
+		throw new ReaderException(report);
+
+	}
+
+	public static void printReadingError(String report, Reader reader, int line) {
+
+		Bukkit.getConsoleSender().sendMessage("[CommandCraftCore] §cError: " + report + "§c! §7File: "
+				+ reader.getFile().getPath() + " §6Line: §e" + line);
+		throw new ReaderException(report);
+
+	}
+
+	/**
+	 * By Jonas Klemming https://stackoverflow.com/a/237204
+	 */
+	public static boolean isInteger(String str) {
+		if (str == null) {
+			return false;
+		}
+		int length = str.length();
+		if (length == 0) {
+			return false;
+		}
+		int i = 0;
+		if (str.charAt(0) == '-') {
+			if (length == 1) {
+				return false;
+			}
+			i = 1;
+		}
+		for (; i < length; i++) {
+			char c = str.charAt(i);
+			if (c < '0' || c > '9') {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * Return a random integer in a certain range
+	 * 
+	 * @param Min
+	 *            The min number of the range
+	 * @param Max
+	 *            The max number of the range
+	 * @return A number between min and max (included)
+	 */
+	public static int nextInt(int min, int max) {
+		if (min == max) {
+			return max;
+		}
+
+		return rand.nextInt(max - min + 1) + min;
 	}
 
 }
