@@ -64,6 +64,7 @@ import com.fren_gor.commandCraftCore.events.events.OnDisableEvent;
 import com.fren_gor.commandCraftCore.events.events.OnEnableEvent;
 import com.fren_gor.commandCraftCore.loops.LoopManager;
 import com.fren_gor.commandCraftCore.loops.NewLoop;
+import com.fren_gor.commandCraftCore.reader.Reader;
 import com.fren_gor.commandCraftCore.utils.saveUtils.DoubleObject;
 import com.fren_gor.commandCraftCore.utils.saveUtils.SavingObject;
 import com.fren_gor.commandCraftCore.vars.StaticActions;
@@ -159,14 +160,16 @@ public class CommandCraftCore extends JavaPlugin implements Listener {
 			}
 		}
 
-		if (!new File(getDataFolder(), "commands").exists()) {
-			new File(getDataFolder(), "commands").mkdir();
-		}
-		if (!new File(getDataFolder(), "events").exists()) {
-			new File(getDataFolder(), "events").mkdir();
-		}
-		if (!new File(getDataFolder(), "loops").exists()) {
-			new File(getDataFolder(), "loops").mkdir();
+		if (ConfigManager.createFolders()) {
+			if (!new File(getDataFolder(), "commands").exists()) {
+				new File(getDataFolder(), "commands").mkdir();
+			}
+			if (!new File(getDataFolder(), "events").exists()) {
+				new File(getDataFolder(), "events").mkdir();
+			}
+			if (!new File(getDataFolder(), "loops").exists()) {
+				new File(getDataFolder(), "loops").mkdir();
+			}
 		}
 
 		for (File f : getDataFolder().listFiles()) {
@@ -496,15 +499,16 @@ public class CommandCraftCore extends JavaPlugin implements Listener {
 				System.out.println(s);
 			}
 		}
-
-		if (!new File(instance.getDataFolder(), "commands").exists()) {
-			new File(instance.getDataFolder(), "commands").mkdir();
-		}
-		if (!new File(instance.getDataFolder(), "events").exists()) {
-			new File(instance.getDataFolder(), "events").mkdir();
-		}
-		if (!new File(instance.getDataFolder(), "loops").exists()) {
-			new File(instance.getDataFolder(), "loops").mkdir();
+		if (ConfigManager.createFolders()) {
+			if (!new File(instance.getDataFolder(), "commands").exists()) {
+				new File(instance.getDataFolder(), "commands").mkdir();
+			}
+			if (!new File(instance.getDataFolder(), "events").exists()) {
+				new File(instance.getDataFolder(), "events").mkdir();
+			}
+			if (!new File(instance.getDataFolder(), "loops").exists()) {
+				new File(instance.getDataFolder(), "loops").mkdir();
+			}
 		}
 
 		for (File f : instance.getDataFolder().listFiles()) {

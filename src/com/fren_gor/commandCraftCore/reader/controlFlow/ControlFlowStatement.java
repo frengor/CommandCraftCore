@@ -20,11 +20,11 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-package com.fren_gor.commandCraftCore.lines.controlFlow;
+package com.fren_gor.commandCraftCore.reader.controlFlow;
 
 import java.util.List;
 
-import com.fren_gor.commandCraftCore.lines.GotoLine;
+import com.fren_gor.commandCraftCore.reader.lines.GotoLine;
 
 public interface ControlFlowStatement {
 	public ControlFlowType getType();

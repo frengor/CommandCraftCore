@@ -50,15 +50,17 @@ public abstract class Variable implements Cloneable {
 	public abstract VarType getType();
 
 	@Getter
-	protected final String name;
+	protected String name;
 
 	@Getter
 	protected final VariableManager manager;
 
 	protected Variable(VariableManager m, String name) {
 
-		if (getType() == null)
-			throw new VariableException("A variable must belong to a VarType");
+		/*
+		 * if (getType() == null) throw new
+		 * VariableException("A variable must belong to a VarType");
+		 */
 
 		name = name.trim();
 
@@ -66,7 +68,7 @@ public abstract class Variable implements Cloneable {
 			name = "$" + name;
 
 		if (m.vars.containsKey(name)) {
-			throw new VariableException("Variable with name '" + name + "' already exist");
+			throw new VariableException("A variable with name '" + name + "' already exist");
 		}
 		m.vars.put(name, this);
 		this.name = name;

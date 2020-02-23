@@ -20,31 +20,10 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-package com.fren_gor.commandCraftCore.lines.conditions;
+package com.fren_gor.commandCraftCore.reader.lines;
 
-import com.fren_gor.commandCraftCore.vars.VarType;
-import com.fren_gor.commandCraftCore.vars.Variable;
-import com.fren_gor.commandCraftCore.vars.VariableManager;
+public enum LineType {
 
-public class VarCondition extends Condition {
-	private String var;
-
-	public VarCondition(String var) {
-		this.var = var;
-	}
-
-	@Override
-	public boolean execute(VariableManager manager) throws IllegalArgumentException {
-		Variable v = manager.execute(var);
-		if (v.getType() == VarType.BOOLEAN) {
-			return (boolean) v.get();
-		} else
-			throw new IllegalArgumentException("'!if' statements support only boolean conditions");
-	}
-
-	@Override
-	public String toString() {
-		return var;
-	}
+	COMMAND, IF, GOTO, CANCEL, CANCEL_BOOLEAN, RETURN, RETURN_BOOLEAN, VAR, WAIT, FOREACH;
 
 }

@@ -42,35 +42,36 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-package com.fren_gor.commandCraftCore.lines;
+package com.fren_gor.commandCraftCore.reader.lines;
 
-import com.fren_gor.commandCraftCore.Reader;
 import com.fren_gor.commandCraftCore.ScriptType;
+import com.fren_gor.commandCraftCore.reader.Reader;
 
-import lombok.Getter;
+public class ReturnBooleanLine extends Line {
 
-public class CancelBooleanLine extends Line {
+	private final boolean valueToReturn;
 
-	@Getter
-	private final boolean cancelled;
-
-	public CancelBooleanLine(Reader reader, int line, boolean valueToReturn) {
+	public ReturnBooleanLine(Reader reader, int line, boolean valueToReturn) {
 		super(reader, line);
-		this.cancelled = valueToReturn;
-		if (reader.getType() != ScriptType.EVENT) {
-			reader.throwError("'!cancel_" + valueToReturn + "' can be used only in event scripts");
+		this.valueToReturn = valueToReturn;
+		if (reader.getType() != ScriptType.COMMAND) {
+			reader.throwError("'!return_" + valueToReturn + "' can be used only in command scripts");
 			return;
 		}
 	}
 
+	public boolean getValueToReturn() {
+		return valueToReturn;
+	}
+
 	@Override
 	public LineType getType() {
-		return LineType.CANCEL_BOOLEAN;
+		return LineType.RETURN_BOOLEAN;
 	}
 
 	@Override
 	public String toString() {
-		return "cancel -> " + cancelled;
+		return "return -> " + valueToReturn;
 	}
 
 }

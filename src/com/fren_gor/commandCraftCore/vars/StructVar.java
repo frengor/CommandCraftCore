@@ -32,7 +32,7 @@ import com.google.common.collect.Sets;
 
 import lombok.Getter;
 
-public class StructVar extends Variable {
+public class StructVar extends Variable implements VariableCollection {
 
 	@Getter
 	private static Set<String> list = Collections.unmodifiableSet(Sets.newHashSet("=", "==", "equals", "add", "remove",
@@ -174,6 +174,11 @@ public class StructVar extends Variable {
 			j.add(o.toString());
 
 		return "{" + j.toString() + "}";
+	}
+
+	@Override
+	public List<Variable> getValues() {
+		return value;
 	}
 
 }

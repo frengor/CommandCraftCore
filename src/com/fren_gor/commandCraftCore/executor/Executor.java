@@ -22,6 +22,7 @@
 
 package com.fren_gor.commandCraftCore.executor;
 
+import java.util.Iterator;
 import java.util.Map;
 
 import org.bukkit.Bukkit;
@@ -29,17 +30,20 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import com.fren_gor.commandCraftCore.CommandCraftCore;
 import com.fren_gor.commandCraftCore.ConfigManager;
-import com.fren_gor.commandCraftCore.Reader;
 import com.fren_gor.commandCraftCore.ScriptType;
-import com.fren_gor.commandCraftCore.lines.CancelBooleanLine;
-import com.fren_gor.commandCraftCore.lines.CommandLine;
-import com.fren_gor.commandCraftCore.lines.GotoLine;
-import com.fren_gor.commandCraftCore.lines.IfLine;
-import com.fren_gor.commandCraftCore.lines.Line;
-import com.fren_gor.commandCraftCore.lines.ReturnBooleanLine;
-import com.fren_gor.commandCraftCore.lines.VarLine;
-import com.fren_gor.commandCraftCore.lines.WaitLine;
+import com.fren_gor.commandCraftCore.reader.Reader;
+import com.fren_gor.commandCraftCore.reader.lines.CancelBooleanLine;
+import com.fren_gor.commandCraftCore.reader.lines.CommandLine;
+import com.fren_gor.commandCraftCore.reader.lines.ForEachLine;
+import com.fren_gor.commandCraftCore.reader.lines.GotoLine;
+import com.fren_gor.commandCraftCore.reader.lines.IfLine;
+import com.fren_gor.commandCraftCore.reader.lines.Line;
+import com.fren_gor.commandCraftCore.reader.lines.ReturnBooleanLine;
+import com.fren_gor.commandCraftCore.reader.lines.VarLine;
+import com.fren_gor.commandCraftCore.reader.lines.WaitLine;
 import com.fren_gor.commandCraftCore.vars.BooleanVar;
+import com.fren_gor.commandCraftCore.vars.Variable;
+import com.fren_gor.commandCraftCore.vars.VariableCollection;
 import com.fren_gor.commandCraftCore.vars.VariableManager;
 
 import lombok.Getter;
@@ -112,8 +116,9 @@ public class Executor {
 					}
 				} catch (IllegalArgumentException e) {
 					Bukkit.getConsoleSender().sendMessage("[CommandCraftCore] §cError: " + e.getMessage()
-							+ "§c! §7File: " + reader.getFile().getPath() + " §6Line: §e" + line);
+							+ "§c! §7File: " + reader.getFile().getPath() + " §6Line: §e" + line.getLine());
 					e.printStackTrace();
+					return new Result(true, false, false);
 				}
 				break;
 			}
@@ -126,8 +131,9 @@ public class Executor {
 					((VarLine) line).execute(manager);
 				} catch (IllegalArgumentException e) {
 					Bukkit.getConsoleSender().sendMessage("[CommandCraftCore] §cError: " + e.getMessage()
-							+ "§c! §7File: " + reader.getFile().getPath() + " §6Line: §e" + line);
+							+ "§c! §7File: " + reader.getFile().getPath() + " §6Line: §e" + line.getLine());
 					e.printStackTrace();
+					return new Result(true, false, false);
 				}
 				break;
 			}
@@ -148,6 +154,30 @@ public class Executor {
 			}
 			case RETURN_BOOLEAN: {
 				return new Result(true, false, ((ReturnBooleanLine) line).getValueToReturn());
+			}
+			case FOREACH: {
+
+				ForEachLine foreach = (ForEachLine) line;
+				if (foreach.getIterator() == null) {
+					Variable v = manager.execute(foreach.getList().getVar());
+
+					if (!(v instanceof VariableCollection)) {
+						Bukkit.getConsoleSender()
+								.sendMessage("[CommandCraftCore] §cError: " + foreach.getList().getVar()
+										+ " isn't a collection§c! §7File: " + reader.getFile().getPath() + " §6Line: §e"
+										+ line.getLine());
+						return new Result(true, false, false);
+					}
+
+					foreach.setIterator(((VariableCollection) v).getValues().iterator());
+				}
+				Iterator<Variable> it = foreach.getIterator();
+				if (it.hasNext()) {
+					manager.changeName(it.next(), foreach.getVar().getVar());
+				} else {
+					currentLine.setCurrentLine(foreach.getGotoLine());
+				}
+				break;
 			}
 			case WAIT: {
 				if (reader.getType() == ScriptType.LOOP)

@@ -20,28 +20,12 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-package com.fren_gor.commandCraftCore.lines;
+package com.fren_gor.commandCraftCore.vars;
 
-import com.fren_gor.commandCraftCore.Reader;
-import com.fren_gor.commandCraftCore.ScriptType;
+import java.util.List;
 
-public class ReturnLine extends Line {
+public interface VariableCollection {
 
-	public ReturnLine(Reader reader, int line) {
-		super(reader, line);
-		if (reader.getType() == ScriptType.COMMAND) {
-			reader.throwError("Cannot use '!return' in command scripts");
-		}
-	}
-
-	@Override
-	public LineType getType() {
-		return LineType.RETURN;
-	}
-
-	@Override
-	public String toString() {
-		return "return";
-	}
+	public Iterable<Variable> getValues();
 
 }

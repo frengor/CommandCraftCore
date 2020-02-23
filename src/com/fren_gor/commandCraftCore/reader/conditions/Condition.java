@@ -20,36 +20,29 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-package com.fren_gor.commandCraftCore.lines;
+package com.fren_gor.commandCraftCore.reader.conditions;
 
-import org.apache.commons.lang3.Validate;
+import com.fren_gor.commandCraftCore.reader.Reader;
+import com.fren_gor.commandCraftCore.vars.VariableManager;
 
-import com.fren_gor.commandCraftCore.Reader;
+public abstract class Condition {
 
-import lombok.Getter;
-
-public class GotoLine extends Line {
-
-	@Getter
-	private int gotoLine;
-
-	public void setGotoLine(int gotoLine) {
-		Validate.isTrue(gotoLine > 0, "Goto line must be positive");
-		this.gotoLine = gotoLine;
-	}
-
-	public GotoLine(Reader reader, int line) {
-		super(reader, line);
-	}
+	public abstract boolean execute(VariableManager manager) throws IllegalArgumentException;
 
 	@Override
-	public LineType getType() {
-		return LineType.GOTO;
-	}
+	public abstract String toString();
 
-	@Override
-	public String toString() {
-		return String.valueOf(gotoLine);
+	public final static Condition craftCondition(Reader reader, String condition) {
+
+		if (condition.startsWith("(") || condition.startsWith(")") || condition.startsWith("/")
+				|| condition.startsWith("\\")) {
+			return new CommandCondition(reader, condition);
+		} else if (condition.startsWith("!var ") || condition.startsWith("$") || condition.startsWith("@")
+				|| condition.startsWith("true") || condition.startsWith("false")) {
+			return new VarCondition(condition);
+		} else
+			reader.throwError("Invalid condition");
+		return null;
 	}
 
 }

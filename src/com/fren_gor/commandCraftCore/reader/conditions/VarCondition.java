@@ -20,34 +20,32 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-package com.fren_gor.commandCraftCore.lines;
+package com.fren_gor.commandCraftCore.reader.conditions;
 
-import com.fren_gor.commandCraftCore.Reader;
+import com.fren_gor.commandCraftCore.vars.VarType;
+import com.fren_gor.commandCraftCore.vars.Variable;
+import com.fren_gor.commandCraftCore.vars.VariableManager;
 
-import lombok.Getter;
+public class VarCondition extends Condition {
+	private String var;
 
-public class WaitLine extends Line {
-
-	@Getter
-	private long ticksToWait;
-
-	public WaitLine(Reader reader, int line, long ticksToWait) {
-		super(reader, line);
-		if (ticksToWait < 0) {
-			reader.throwError("'!wait' ticks must be positive");
-			return;
-		}
-		this.ticksToWait = ticksToWait;
+	public VarCondition(String var) {
+		this.var = var;
 	}
 
 	@Override
-	public LineType getType() {
-		return LineType.WAIT;
+	public boolean execute(VariableManager manager) throws IllegalArgumentException {
+		Variable v = manager.execute(var);
+		if (v.getType() == VarType.BOOLEAN) {
+			return (boolean) v.get();
+		} else
+			throw new IllegalArgumentException(
+					"Invalid return " + v.getType().getName().toLowerCase() + " in a boolean condition");
 	}
 
 	@Override
 	public String toString() {
-		return "wait " + ticksToWait;
+		return var;
 	}
 
 }

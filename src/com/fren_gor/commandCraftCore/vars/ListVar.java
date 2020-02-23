@@ -34,7 +34,7 @@ import com.google.common.collect.Sets;
 
 import lombok.Getter;
 
-public class ListVar extends Variable {
+public class ListVar extends Variable implements VariableCollection {
 
 	@Getter
 	private static Set<String> list = Collections
@@ -306,6 +306,11 @@ public class ListVar extends Variable {
 	public void setFinal() {
 		super.setFinal();
 		list = Collections.unmodifiableSet(list);
+	}
+
+	@Override
+	public List<Variable> getValues() {
+		return value;
 	}
 
 }

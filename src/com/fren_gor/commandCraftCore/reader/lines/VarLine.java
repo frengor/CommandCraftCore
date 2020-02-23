@@ -20,35 +20,39 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-package com.fren_gor.commandCraftCore.lines;
+package com.fren_gor.commandCraftCore.reader.lines;
 
-import org.apache.commons.lang.Validate;
-
-import com.fren_gor.commandCraftCore.Reader;
+import com.fren_gor.commandCraftCore.reader.Reader;
+import com.fren_gor.commandCraftCore.vars.VariableManager;
 
 import lombok.Getter;
 
-public abstract class Line {
+public class VarLine extends Line {
 
 	@Getter
-	protected final Reader reader;
-	@Getter
-	protected final int line;
+	private String var;
 
-	/**
-	 * Creates a new line.
-	 * 
-	 */
-	public Line(Reader reader, int line) {
-		Validate.notNull(reader, "Invalid Reader");
-		Validate.isTrue(line > 0, "Invalid line");
-		this.reader = reader;
-		this.line = line;
+	public VarLine(Reader reader, int line, String var) {
+		super(reader, line);
+		this.var = var.trim();
+		if (!(this.var.startsWith("!var") || this.var.startsWith("$") || this.var.startsWith("@"))) {
+			reader.throwError("Invalid '!var' statement '" + var + "'");
+			return;
+		}
 	}
 
-	public abstract LineType getType();
+	public void execute(VariableManager manager) throws IllegalArgumentException {
+		manager.execute(var);
+	}
 
 	@Override
-	public abstract String toString();
+	public LineType getType() {
+		return LineType.VAR;
+	}
+
+	@Override
+	public String toString() {
+		return var;
+	}
 
 }

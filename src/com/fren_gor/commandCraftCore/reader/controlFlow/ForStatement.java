@@ -20,51 +20,68 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-package com.fren_gor.commandCraftCore.lines.controlFlow;
+package com.fren_gor.commandCraftCore.reader.controlFlow;
 
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
-import com.fren_gor.commandCraftCore.lines.GotoLine;
-import com.fren_gor.commandCraftCore.lines.IfLine;
+import com.fren_gor.commandCraftCore.reader.lines.GotoLine;
+import com.fren_gor.commandCraftCore.reader.lines.IfLine;
+import com.fren_gor.commandCraftCore.reader.lines.VarLine;
 
 import lombok.Getter;
 
-public class IfStatement implements ControlFlowStatement {
+public class ForStatement implements ControlFlowStatement {
 
 	@Getter
 	private final IfLine line;
 	@Getter
+	private final VarLine increment;
+	@Getter
 	private final List<GotoLine> gotoLines;
+	@Getter
+	private final int executionLine;
 
-	public IfStatement(IfLine line, GotoLine newGotoLine, GotoLine... oldGotoLine) {
+	public ForStatement(IfLine line, VarLine increment, int executorLine, GotoLine newGotoLine,
+			GotoLine... oldGotoLine) {
 		this.line = line;
+		this.increment = increment;
+		this.executionLine = executorLine;
 		this.gotoLines = new LinkedList<>();
 		Collections.addAll(this.gotoLines, oldGotoLine);
 		this.gotoLines.add(newGotoLine);
 	}
 
-	public IfStatement(IfLine line, GotoLine newGotoLine, List<GotoLine> oldGotoLine) {
+	public ForStatement(IfLine line, VarLine increment, int executorLine, GotoLine newGotoLine,
+			List<GotoLine> oldGotoLine) {
 		this.line = line;
+		this.increment = increment;
+		this.executionLine = executorLine;
 		this.gotoLines = oldGotoLine;
 		this.gotoLines.add(newGotoLine);
 	}
 
-	public IfStatement(IfLine line, GotoLine newGotoLine) {
+	public ForStatement(IfLine line, VarLine increment, int executorLine, GotoLine newGotoLine) {
 		this.line = line;
+		this.increment = increment;
+		this.executionLine = executorLine;
 		this.gotoLines = new LinkedList<>();
 		this.gotoLines.add(newGotoLine);
 	}
 
-	public IfStatement(IfLine line, GotoLine... gotoLine) {
+	public ForStatement(IfLine line, VarLine increment, int executorLine, GotoLine... gotoLine) {
 		this.line = line;
+		this.increment = increment;
+		this.executionLine = executorLine;
 		this.gotoLines = new LinkedList<>();
 		Collections.addAll(this.gotoLines, gotoLine);
 	}
 
-	public IfStatement(IfLine line, List<GotoLine> gotoLine) {
+	public ForStatement(IfLine line, VarLine increment, int executorLine, List<GotoLine> gotoLine) {
 		this.line = line;
+		this.increment = increment;
+		this.executionLine = executorLine;
 		this.gotoLines = gotoLine;
 	}
 
@@ -74,7 +91,7 @@ public class IfStatement implements ControlFlowStatement {
 
 	@Override
 	public ControlFlowType getType() {
-		return ControlFlowType.IF;
+		return ControlFlowType.FOR;
 	}
 
 }

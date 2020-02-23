@@ -24,8 +24,8 @@ package com.fren_gor.commandCraftCore.loops;
 
 import java.io.File;
 
-import com.fren_gor.commandCraftCore.Reader;
 import com.fren_gor.commandCraftCore.ScriptType;
+import com.fren_gor.commandCraftCore.reader.Reader;
 import com.fren_gor.commandCraftCore.utils.saveUtils.DoubleMultiHashMap;
 
 public class LoopManager {

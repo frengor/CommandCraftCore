@@ -20,11 +20,34 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-package com.fren_gor.commandCraftCore.lines.controlFlow;
+package com.fren_gor.commandCraftCore.reader.lines;
 
-public enum ControlFlowType {
-	IF, ELSE
-	// ,WHILE,
-	// FOR
-	;
+import com.fren_gor.commandCraftCore.reader.Reader;
+
+import lombok.Getter;
+
+public class WaitLine extends Line {
+
+	@Getter
+	private long ticksToWait;
+
+	public WaitLine(Reader reader, int line, long ticksToWait) {
+		super(reader, line);
+		if (ticksToWait < 0) {
+			reader.throwError("'!wait' ticks must be positive");
+			return;
+		}
+		this.ticksToWait = ticksToWait;
+	}
+
+	@Override
+	public LineType getType() {
+		return LineType.WAIT;
+	}
+
+	@Override
+	public String toString() {
+		return "wait " + ticksToWait;
+	}
+
 }

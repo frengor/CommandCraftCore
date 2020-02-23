@@ -42,6 +42,7 @@ public final class VarType implements Serializable {
 
 	public transient static final VarType INT, DOUBLE, STRING, BOOLEAN, LIST, PLAYER, NULL, STRUCT,
 			BYTE_ARRAY_DATA_INPUT;
+	private static final String INVALID_CHARS = ";: \t\n\r\b\f\0";
 
 	private transient static Map<String, VarType> map = new ConcurrentHashMap<>();
 
@@ -64,7 +65,20 @@ public final class VarType implements Serializable {
 
 		if (!varTypeName.equals("NULL") && !getMethodNames.get().containsAll(NullVar.getList()))
 			throw new VariableException("VarType '" + varTypeName
-					+ "' doesn't implement all the basic methods 'toString', '==', 'equals', '=', '!=', 'type'");
+					+ "' doesn't implement all the mandatory methods 'toString', '==', 'equals', '=', '!=', 'type'");
+
+		for (char c : varTypeName.toCharArray()) {
+			if (INVALID_CHARS.contains(String.valueOf(c))) {
+				throw new VariableException("Invalid VarType name '" + varTypeName);
+			}
+		}
+
+		for (String s : getMethodNames.get())
+			for (char c : s.toCharArray()) {
+				if (INVALID_CHARS.contains(String.valueOf(c))) {
+					throw new VariableException("Invalid method name '" + varTypeName);
+				}
+			}
 
 		return new VarType(varTypeName, getMethodNames);
 

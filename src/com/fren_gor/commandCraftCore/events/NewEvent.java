@@ -33,9 +33,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.EventExecutor;
 
 import com.fren_gor.commandCraftCore.CommandCraftCore;
-import com.fren_gor.commandCraftCore.Reader;
 import com.fren_gor.commandCraftCore.ScriptType;
 import com.fren_gor.commandCraftCore.executor.Executor;
+import com.fren_gor.commandCraftCore.reader.Reader;
 import com.fren_gor.commandCraftCore.utils.saveUtils.TripleConsumer;
 import com.fren_gor.commandCraftCore.vars.BooleanVar;
 import com.fren_gor.commandCraftCore.vars.VariableManager;

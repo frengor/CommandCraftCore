@@ -20,48 +20,28 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-package com.fren_gor.commandCraftCore.lines;
+package com.fren_gor.commandCraftCore.reader.lines;
 
-import com.fren_gor.commandCraftCore.Reader;
-import com.fren_gor.commandCraftCore.lines.conditions.Condition;
-import com.fren_gor.commandCraftCore.vars.VariableManager;
+import com.fren_gor.commandCraftCore.ScriptType;
+import com.fren_gor.commandCraftCore.reader.Reader;
 
-import lombok.Getter;
+public class ReturnLine extends Line {
 
-public class IfLine extends Line {
-
-	private Condition condition;
-	@Getter
-	private int elseLine;
-
-	public IfLine(Reader reader, int line, String condition) {
+	public ReturnLine(Reader reader, int line) {
 		super(reader, line);
-
-		this.condition = Condition.craftCondition(reader, condition);
-	}
-
-	public boolean hasElse() {
-		return elseLine > 0;
-	}
-
-	public void setElseLine(int elseLine) {
-		this.elseLine = elseLine;
-	}
-
-	public boolean execute(VariableManager manager) throws IllegalArgumentException {
-
-		return condition.execute(manager);
-
+		if (reader.getType() == ScriptType.COMMAND) {
+			reader.throwError("Cannot use '!return' in command scripts");
+		}
 	}
 
 	@Override
 	public LineType getType() {
-		return LineType.IF;
+		return LineType.RETURN;
 	}
 
 	@Override
 	public String toString() {
-		return condition.toString() + (hasElse() ? " [elseline:" + elseLine + "]" : " [no else]");
+		return "return";
 	}
 
 }

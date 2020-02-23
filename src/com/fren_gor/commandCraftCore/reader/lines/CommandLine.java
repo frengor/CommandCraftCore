@@ -20,19 +20,20 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-package com.fren_gor.commandCraftCore.lines.conditions;
+package com.fren_gor.commandCraftCore.reader.lines;
 
 import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import com.fren_gor.commandCraftCore.Reader;
+import com.fren_gor.commandCraftCore.reader.Reader;
 import com.fren_gor.commandCraftCore.utils.Utils;
 import com.fren_gor.commandCraftCore.vars.VariableManager;
 
 import lombok.Getter;
 
-public class CommandCondition extends Condition {
+public class CommandLine extends Line {
+
 	@Getter
 	private String command;
 	@Getter
@@ -42,12 +43,13 @@ public class CommandCondition extends Condition {
 	@Getter
 	private boolean negate;
 
-	public CommandCondition(Reader reader, String command) {
+	public CommandLine(Reader reader, int line, String command) {
+		super(reader, line);
 		Validate.notNull(command, "Command can't be null");
-		if (command.length() < 6) {
-			reader.throwError("Invalid command: §f'" + command + "'");
-			return;
-		}
+		/*
+		 * if (command.length() < 6) { reader.throwError("Invalid command: §f'"
+		 * + command + "'"); return; }
+		 */
 		command = command.trim();
 		if (Utils.check(command, "(") && command.contains(")")) {
 			int sindex = command.indexOf("/");
@@ -64,7 +66,7 @@ public class CommandCondition extends Condition {
 			playerCommand = true;
 			command = command.substring(index);
 
-			player = getPlayerFromLine(reader, playerName);
+			player = getPlayerFromLine(playerName);
 
 		}
 
@@ -79,40 +81,7 @@ public class CommandCondition extends Condition {
 
 	}
 
-	// for VariableManager
-	public CommandCondition(String command) throws IllegalArgumentException {
-		Validate.notNull(command, "Command can't be null");
-		Validate.isTrue(command.length() >= 6, "Invalid command: §f'" + command + "'");
-
-		command = command.trim();
-		if (Utils.check(this.command, "(") && command.contains(")")) {
-			int sindex = command.indexOf("/");
-			int bindex = command.indexOf("\\");
-			int index = sindex == -1 ? bindex : bindex == -1 ? sindex : sindex < bindex ? sindex : bindex;
-			String playerName = command.substring(0, index);
-			int close = playerName.lastIndexOf(")");
-
-			Validate.isTrue(close != 1, "Invalid command: §f'" + command + "'");
-
-			playerCommand = true;
-			command = command.substring(index);
-
-			player = getPlayerFromLine(playerName);
-
-		}
-
-		if (Utils.check(this.command, "/")) {
-			this.command = command;
-			this.negate = false;
-		} else if (Utils.check(this.command, "\\")) {
-			this.command = command;
-			this.negate = true;
-		} else
-			throw new IllegalArgumentException("Invalid command: §f'" + command + "'");
-
-	}
-
-	private String getPlayerFromLine(Reader reader, String line) {
+	private String getPlayerFromLine(String line) {
 
 		String s = line.trim().substring(1, line.length() - 2).trim();
 
@@ -125,20 +94,6 @@ public class CommandCondition extends Condition {
 
 	}
 
-	// for VariableManager
-	private String getPlayerFromLine(String line) throws IllegalArgumentException {
-
-		String s = line.trim().substring(1, line.length() - 2).trim();
-
-		if (s.contains("(") || s.contains(")")) {
-			throw new IllegalArgumentException("Invalid command: §f'" + command + "'");
-		}
-
-		return s;
-
-	}
-
-	@Override
 	public boolean execute(VariableManager manager) {
 
 		if (playerCommand) {
@@ -152,7 +107,13 @@ public class CommandCondition extends Condition {
 	}
 
 	@Override
+	public LineType getType() {
+		return LineType.COMMAND;
+	}
+
+	@Override
 	public String toString() {
 		return (negate ? "\\" : "/") + (playerCommand ? "(" + player + ") " + command : command);
 	}
+
 }

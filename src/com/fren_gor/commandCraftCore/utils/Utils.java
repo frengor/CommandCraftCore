@@ -28,9 +28,10 @@ import java.util.List;
 import java.util.Random;
 
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 
-import com.fren_gor.commandCraftCore.Reader;
 import com.fren_gor.commandCraftCore.exceptions.ReaderException;
+import com.fren_gor.commandCraftCore.reader.Reader;
 
 import lombok.experimental.UtilityClass;
 
@@ -51,6 +52,18 @@ public class Utils {
 			}
 		}
 		return Options;
+	}
+
+	public static List<String> getOnlinePlayeNames() {
+		return getPlayeNames(Bukkit.getOnlinePlayers());
+	}
+
+	public static List<String> getPlayeNames(Collection<? extends Player> players) {
+		List<String> l = new ArrayList<>(players.size());
+		for (Player p : players) {
+			l.add(p.getName());
+		}
+		return l;
 	}
 
 	/**

@@ -1,7 +1,7 @@
 main: com.fren_gor.commandCraftCore.CommandCraftCore
 name: CommandCraftCore
 description: Create cmcs scripts to run sequences of commands on spigot servers!
-version: alpha-2.0
+version: alpha-2.1
 author: fren_gor
 website: www.frengor.com
 

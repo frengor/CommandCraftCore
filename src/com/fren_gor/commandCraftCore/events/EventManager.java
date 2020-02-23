@@ -40,8 +40,8 @@ import org.bukkit.event.Event;
 import org.reflections.Reflections;
 
 import com.fren_gor.commandCraftCore.CommandCraftCore;
-import com.fren_gor.commandCraftCore.Reader;
 import com.fren_gor.commandCraftCore.ScriptType;
+import com.fren_gor.commandCraftCore.reader.Reader;
 import com.fren_gor.commandCraftCore.utils.saveUtils.DoubleMultiHashMap;
 import com.fren_gor.commandCraftCore.utils.saveUtils.TripleConsumer;
 import com.fren_gor.commandCraftCore.utils.saveUtils.TripleMultiHashMap;

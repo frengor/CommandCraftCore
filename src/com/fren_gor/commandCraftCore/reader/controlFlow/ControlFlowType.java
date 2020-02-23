@@ -20,28 +20,8 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-package com.fren_gor.commandCraftCore.lines;
+package com.fren_gor.commandCraftCore.reader.controlFlow;
 
-import com.fren_gor.commandCraftCore.Reader;
-import com.fren_gor.commandCraftCore.ScriptType;
-
-public class CancelLine extends Line {
-
-	public CancelLine(Reader reader, int line) {
-		super(reader, line);
-		if (reader.getType() == ScriptType.LOOP) {
-			reader.throwError("'!cancel' can be used only in loop scripts");
-		}
-	}
-
-	@Override
-	public LineType getType() {
-		return LineType.CANCEL;
-	}
-
-	@Override
-	public String toString() {
-		return "cancel";
-	}
-
+public enum ControlFlowType {
+	IF, ELSE, WHILE, FOR, FOREACH;
 }

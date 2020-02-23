@@ -58,6 +58,7 @@ public class ConfigManager {
 	}
 
 	static void setDisabledScripts(List<String> l) {
+		disabledScripts.clear();
 		for (String s : l) {
 			disabledScripts.add(s.endsWith(".cmc") ? s : s + ".cmc");
 		}

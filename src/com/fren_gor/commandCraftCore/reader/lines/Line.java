@@ -20,49 +20,35 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-package com.fren_gor.commandCraftCore.lines.controlFlow;
+package com.fren_gor.commandCraftCore.reader.lines;
 
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import org.apache.commons.lang.Validate;
 
-import com.fren_gor.commandCraftCore.lines.GotoLine;
+import com.fren_gor.commandCraftCore.reader.Reader;
 
 import lombok.Getter;
 
-public class ElseStatement implements ControlFlowStatement {
+public abstract class Line {
 
 	@Getter
-	private final List<GotoLine> gotoLines;
+	protected final Reader reader;
+	@Getter
+	protected final int line;
 
-	public ElseStatement(GotoLine newGotoLine, GotoLine... oldGotoLine) {
-		this.gotoLines = new LinkedList<>();
-		Collections.addAll(this.gotoLines, oldGotoLine);
-		this.gotoLines.add(newGotoLine);
+	/**
+	 * Creates a new line.
+	 * 
+	 */
+	public Line(Reader reader, int line) {
+		Validate.notNull(reader, "Invalid Reader");
+		Validate.isTrue(line > 0, "Invalid line");
+		this.reader = reader;
+		this.line = line;
 	}
 
-	public ElseStatement(GotoLine newGotoLine, List<GotoLine> oldGotoLine) {
-		this.gotoLines = oldGotoLine;
-		this.gotoLines.add(newGotoLine);
-	}
-
-	public ElseStatement(GotoLine newGotoLine) {
-		this.gotoLines = new LinkedList<>();
-		this.gotoLines.add(newGotoLine);
-	}
-
-	public ElseStatement(GotoLine... gotoLine) {
-		this.gotoLines = new LinkedList<>();
-		Collections.addAll(this.gotoLines, gotoLine);
-	}
-
-	public ElseStatement(List<GotoLine> gotoLine) {
-		this.gotoLines = gotoLine;
-	}
+	public abstract LineType getType();
 
 	@Override
-	public ControlFlowType getType() {
-		return ControlFlowType.ELSE;
-	}
+	public abstract String toString();
 
 }

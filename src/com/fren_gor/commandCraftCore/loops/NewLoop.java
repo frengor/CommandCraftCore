@@ -25,9 +25,9 @@ package com.fren_gor.commandCraftCore.loops;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import com.fren_gor.commandCraftCore.CommandCraftCore;
-import com.fren_gor.commandCraftCore.Reader;
 import com.fren_gor.commandCraftCore.ScriptType;
 import com.fren_gor.commandCraftCore.executor.Executor;
+import com.fren_gor.commandCraftCore.reader.Reader;
 import com.fren_gor.commandCraftCore.vars.IntVar;
 
 public class NewLoop extends BukkitRunnable {

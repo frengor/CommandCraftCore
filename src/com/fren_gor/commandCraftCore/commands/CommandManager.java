@@ -38,10 +38,10 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 
 import com.fren_gor.commandCraftCore.CommandCraftCore;
-import com.fren_gor.commandCraftCore.Reader;
 import com.fren_gor.commandCraftCore.ReflectionUtil;
 import com.fren_gor.commandCraftCore.ScriptType;
 import com.fren_gor.commandCraftCore.executor.Executor;
+import com.fren_gor.commandCraftCore.reader.Reader;
 import com.fren_gor.commandCraftCore.utils.Utils;
 import com.fren_gor.commandCraftCore.utils.saveUtils.DoubleMultiHashMap;
 import com.fren_gor.commandCraftCore.vars.ListVar;

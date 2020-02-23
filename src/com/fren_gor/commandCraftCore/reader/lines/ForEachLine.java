@@ -20,28 +20,57 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-package com.fren_gor.commandCraftCore.lines.conditions;
+package com.fren_gor.commandCraftCore.reader.lines;
 
-import com.fren_gor.commandCraftCore.Reader;
+import java.util.Iterator;
+
+import com.fren_gor.commandCraftCore.reader.Reader;
+import com.fren_gor.commandCraftCore.vars.Variable;
 import com.fren_gor.commandCraftCore.vars.VariableManager;
 
-public abstract class Condition {
+import lombok.Getter;
+import lombok.Setter;
 
-	public abstract boolean execute(VariableManager manager) throws IllegalArgumentException;
+public class ForEachLine extends Line {
+
+	@Getter
+	private VarLine var;
+	@Getter
+	private VarLine list;
+	@Getter
+	@Setter
+	private int gotoLine;
+	@Setter
+	@Getter
+	private Iterator<Variable> iterator;
+
+	public ForEachLine(Reader reader, int line, String var, String list) {
+		super(reader, line);
+		System.out.println(var);
+		var = var.trim();
+		if (var.startsWith("!var "))
+			var = var.substring(5).trim();
+		try {
+			if (!VariableManager.verifyName(var)) {
+				reader.throwError("Invalid foreach statement. '" + var + "' isn't a valid variable");
+				return;
+			}
+		} catch (IllegalArgumentException e) {
+			reader.throwError("Invalid foreach statement. '" + var + "' isn't a valid variable");
+			return;
+		}
+		this.var = new VarLine(reader, line, var);
+		this.list = new VarLine(reader, line, list);
+	}
 
 	@Override
-	public abstract String toString();
+	public LineType getType() {
+		return LineType.FOREACH;
+	}
 
-	public final static Condition craftCondition(Reader reader, String condition) {
-
-		if (condition.startsWith("(") || condition.startsWith(")") || condition.startsWith("/")
-				|| condition.startsWith("\\")) {
-			return new CommandCondition(reader, condition);
-		} else if (condition.startsWith("!var ") || condition.startsWith("$") || condition.startsWith("@")) {
-			return new VarCondition(condition);
-		} else
-			reader.throwError("Invalid condition");
-		return null;
+	@Override
+	public String toString() {
+		return var + " : " + line;
 	}
 
 }

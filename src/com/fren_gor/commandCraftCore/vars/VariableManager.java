@@ -29,8 +29,9 @@ import java.util.Map.Entry;
 import org.apache.commons.lang.Validate;
 import org.bukkit.entity.Player;
 
-import com.fren_gor.commandCraftCore.lines.conditions.CommandCondition;
+import com.fren_gor.commandCraftCore.reader.conditions.CommandCondition;
 import com.fren_gor.commandCraftCore.utils.VariableMap;
+import com.fren_gor.commandCraftCore.vars.exceptions.VariableException;
 
 import lombok.Getter;
 
@@ -54,7 +55,22 @@ public final class VariableManager implements Cloneable {
 		return "$internal_" + internalVars++;
 	}
 
-	private static final String ALLOWED_CHARS = "abcdefghijklmnopqrstuvwxyzèòàùéçìABCDEFGHIJKLMNOPQRSTUVWXYZÈÒÀÙÉÇÌ0123456789_";
+	private static final String ALLOWED_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
+	// private static final Pattern ALLOWED_CHARS_PATTERN =
+	// Pattern.compile("^[${1}](?!internal_)[A-Za-z_]\\w*$");
+
+	public final Variable changeName(Variable var, String newName) {
+
+		if (!newName.startsWith("$"))
+			newName = "$" + newName;
+
+		Variable newVar = ((Variable) var.clone());
+		vars.remove(newVar.name);
+		vars.put(newName, newVar);
+		newVar.name = newName;
+		return newVar;
+
+	}
 
 	/**
 	 * It verifies if the name of the variable is correct
@@ -67,13 +83,14 @@ public final class VariableManager implements Cloneable {
 	 *             start with '$'
 	 */
 	public static boolean verifyName(String name) throws IllegalArgumentException {
-		if (name.startsWith("internal_"))
-			throw new IllegalArgumentException("Variables name cannot start with 'internal_'");
 		if (!name.startsWith("$")) {
 			throw new IllegalArgumentException("Variables must start with '$'");
 		}
 		if (name.substring(1).contains("$")) {
 			throw new IllegalArgumentException("Variables must have only one '$' in front of the name");
+		}
+		if (name.startsWith("$internal_")) {
+			throw new IllegalArgumentException("Variables name cannot start with 'internal_'");
 		}
 		for (char c : name.substring(1).toCharArray()) {
 			if (!ALLOWED_CHARS.contains(String.valueOf(c))) {
