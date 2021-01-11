@@ -680,10 +680,10 @@ public class Reader {
 			return;
 		}
 
-		if (type == ScriptType.COMMAND && !checkCommandReturn(1)) {
+		/*if (type == ScriptType.COMMAND && !checkCommandReturn(1)) {
 			throwError("Commands must return true or false");
 			return;
-		}
+		}*/
 
 		if (ConfigManager.isActiveViewReadingTime()) {
 
